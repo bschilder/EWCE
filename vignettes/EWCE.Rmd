@@ -19,7 +19,6 @@ vignette: >
 #if (!require("BiocStyle")) BiocManager::install("BiocStyle")
 #pacman::p_load("BiocManager","BiocStyle","ggplot2","cowplot",try.bioconductor=TRUE)
 
-BiocStyle::markdown()
 knitr::opts_chunk$set(tidy         = FALSE,
                       warning      = FALSE,
                       message      = FALSE)
@@ -32,8 +31,6 @@ You can then load the package:
 library(EWCE)
 library(ggplot2)
 library(cowplot)
-library(limma)
-library(readxl)
 theme_set(theme_cowplot())
 ```
 
