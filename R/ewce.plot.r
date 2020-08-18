@@ -20,7 +20,7 @@
 #' @import gridExtra
 #' @importFrom grid unit
 # @import plyr
-ewce.plot <- function(total_res,mtc_method="bonferroni",ctd=NA){
+ewce.plot <- function(total_res,mtc_method="bonferroni",ctd=NULL){
     if(!mtc_method %in% c("holm", "hochberg", "hommel", "bonferroni", "BH", "BY", "fdr", "none")){
         stop("ERROR: Invalid mtc_method argument. Please see '?p.adjust' for valid methods.")
     }
@@ -29,7 +29,7 @@ ewce.plot <- function(total_res,mtc_method="bonferroni",ctd=NA){
 
     # Check if ctd is provided (if so, dendrogram is to be added)
     make_dendro = FALSE
-    suppressWarnings(if(!is.na(ctd[[1]])){
+    if(!is.null(ctd)){
         make_dendro = TRUE
         # If using dendrogram... Find the relevant level of the CTD annotation
         cells.in.ctd <- function(ctdIN,cells){if(sum(!cells %in% colnames(ctdIN$specificity)==0)){return(1)}else{return(0)}}
@@ -42,7 +42,7 @@ ewce.plot <- function(total_res,mtc_method="bonferroni",ctd=NA){
 
         # Set order of cells
         if(length(ctd[[annotLevel]]$plotting)>0){total_res$CellType=factor(total_res$CellType,levels=ctd[[annotLevel]]$plotting$cell_ordering)}
-    })
+    }
 
     # Multiple testing correction across all rows
     total_res$q = p.adjust(total_res$p,method=mtc_method)
