@@ -8,23 +8,35 @@ generate.celltype.data(
   exp,
   annotLevels,
   groupName,
-  no_cores = 1,
-  savePath = "~/"
+  no_cores = NULL,
+  add_names = F,
+  savePath = "~/",
+  file_prefix = "CellTypeData",
+  force_new_file = T,
+  return_ctd = F,
+  verbose = T
 )
 }
 \arguments{
-\item{exp}{Numerical matrix with row for each gene and column for each cell. Row names are MGI/HGNC gene symbols. Column names are cell IDs which can be cross referenced against the annot data frame.}
+\item{exp}{Numerical matrix with row for each gene and column for each cell. Row names are MGI/HGNC gene symbols.
+Column names are cell IDs which can be cross referenced against the annot data frame.}
 
-\item{annotLevels}{List with arrays of strings containing the cell type names associated with each column in exp}
+\item{annotLevels}{List with arrays of strings containing the cell type names associated with each column in exp.
+Alternatively, if \code{exp} is of class \code{SingleCellExperiment}, \code{annotLevels}.
+can simply be a list containing the names of the columns you wish to use as levels (so long as they are in in \code{colnames(exp@colData))}).}
 
-\item{groupName}{A human readable name for refering to the dataset being loaded}
+\item{groupName}{A human readable name for referring to the dataset being loaded.}
 
-\item{no_cores}{Number of cores that should be used to speedup the computation}
+\item{no_cores}{Number of cores that should be used to speedup the computation. Use no_cores = 1 when using this package in windows system.}
 
-\item{savePath}{Directory where the CTD file should be saved}
+\item{savePath}{Directory where the CTD file should be saved.}
+
+\item{force_new_file}{If a file of the same name as the one being created already exists, overwrite it.}
+
+\item{return_ctd}{Return the CTD object in a list along with the file name, instead of just the file name.}
 }
 \value{
-Filenames for the saved celltype_data files
+File names for the saved CellTypeData (CTD) files.
 }
 \description{
 \code{generate.celltype.data} Takes expression & cell type annotations and creates celltype_data files which contain the mean and specificity matrices
@@ -32,10 +44,23 @@ Filenames for the saved celltype_data files
 \examples{
 # Load the single cell data
 data("cortex_mrna")
+
+#### Run as Sparse Matrix (original method) ####
 expData = cortex_mrna$exp
 expData = expData[1:500,] # Use only a subset to keep the example quick
 l1=cortex_mrna$annot$level1class
 l2=cortex_mrna$annot$level2class
 annotLevels = list(l1=l1,l2=l2)
 fNames_ALLCELLS = generate.celltype.data(exp=expData,annotLevels,"allKImouse")
+
+
+#### Run as DelayedArray (for large datasets) ####
+exp <- cortex_mrna$exp
+colData <- cortex_mrna$annot
+save_dir <- "./cortex_mrna_HDF5Array"
+sce <- convert_to_SCE(exp=exp, colData=colData, save_dir=save_dir)
+print(sce)
+
+annotLevels <- c("level1class","level2class")
+fNames_SCE <-generate.celltype.data(exp=sce, annotLevels=annotLevels, groupName="mouse_cortex_SCE", savePath="./")
 }

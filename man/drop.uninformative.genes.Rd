@@ -4,7 +4,17 @@
 \alias{drop.uninformative.genes}
 \title{drop.uninformative.genes}
 \usage{
-drop.uninformative.genes(exp, level2annot)
+drop.uninformative.genes(
+  exp,
+  level2annot,
+  as_DelayedArray = F,
+  colData = NULL,
+  rowData = NULL,
+  sce_save_dir = NULL,
+  pseudobulk_by = NULL,
+  adj_pval_thresh = 1e-05,
+  verbose = T
+)
 }
 \arguments{
 \item{exp}{Expression matrix with gene names as rownames.}
@@ -22,5 +32,5 @@ is less than a strict p-threshold, then the gene is dropped.
 \examples{
 data("cortex_mrna")
 cortex_mrna$exp = cortex_mrna$exp[1:300,] # Use only a subset of genes to keep the example quick
-exp2 = drop.uninformative.genes(exp=cortex_mrna$exp,level2annot=cortex_mrna$annot$level2class)
+exp2 = drop.uninformative.genes(exp=cortex_mrna$exp, level2annot=cortex_mrna$annot$level2class)
 }
