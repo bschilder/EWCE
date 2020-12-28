@@ -193,7 +193,7 @@ generate.celltype.data <- function(exp,
 grouped_col_means <- function(sce,
                               group_var="Class",
                               verbose=T){
-    library(DelayedArray); library(dplyr);
+    # library(DelayedArray); library(dplyr);
     DelayedArray:::set_verbose_block_processing(verbose)
     grouped_sums <- DelayedArray::colsum(sce@assays@data$raw,
                                          group = sce[[group_var]],
@@ -207,7 +207,7 @@ grouped_col_means <- function(sce,
 grouped_col_specificity <- function(sce,
                                     group_var="Class",
                                     verbose=T){
-    library(DelayedArray)
+    # library(DelayedArray)
     grouped_means <- grouped_col_means(sce,
                                        group_var=group_var,
                                        verbose=T)

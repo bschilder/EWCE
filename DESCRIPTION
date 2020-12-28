@@ -32,12 +32,33 @@ Imports:
     scales,
     RNOmni,
     sctransform
-Remotes: ChristophH/sctransform@*release
-Suggests: knitr, BiocStyle, rmarkdown
-biocViews: GeneExpression, Transcription, DifferentialExpression,
-        GeneSetEnrichment, Genetics, Microarray,
-        mRNAMicroarray, OneChannel, RNASeq,
-        BiomedicalInformatics, Proteomics, Visualization,
-        FunctionalGenomics
+Remotes:
+    github:ChristophH/sctransform@*release,
+    github::mojaveazure/seurat-disk,
+    github::cellgeni/sceasy
+Suggests:
+    knitr,
+    BiocStyle,
+    rmarkdown,
+    Seurat, 
+    anndata,
+    loomR,
+    LoomExperiment,
+    reticulate
+biocViews:
+    GeneExpression,
+    Transcription,
+    DifferentialExpression,
+    GeneSetEnrichment,
+    Genetics,
+    Microarray,
+    mRNAMicroarray, 
+    OneChannel, 
+    RNASeq,
+    BiomedicalInformatics, 
+    Proteomics, 
+    Visualization,
+    FunctionalGenomics,
+    SingleCellExperiment 
 RoxygenNote: 7.1.1
 Encoding: UTF-8

@@ -61,13 +61,6 @@
 #' ## From disk
 #' sce <- ingest_data(obj="~/Desktop/pbmc_small.loom")
 #'
-#' @export
-#' @import sceasy
-#' @import Seurat
-#' @import SeuratDisk
-#' @import anndata
-#' @import HDF5Array
-#' @import DelayedArray
 #' @import dplyr
 #' @source
 #' \href{https://github.com/cellgeni/sceasy}{sceasy}
@@ -126,7 +119,7 @@ read_scRNAseq_data <- function(obj,
             return(object)
         }
         #### Generic RDS ####
-        if(endsWith(tolower(obj), suffix=".rda") | tolower(filetype)=="rda"){
+        if(any(endsWith(tolower(obj), suffix=c(".rda",".rdata"))) | tolower(filetype)=="rda"){
             messager("+ Reading in .rda file of unknown type...")
             object <- loadRData(obj)
             return(object)

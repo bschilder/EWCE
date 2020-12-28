@@ -110,7 +110,31 @@ filter_nonorthologues <- function(filenames,
 
 
 
-
+taxaID_dict <- function(species=c("human","mouse","fly")){
+    dict <- setNames(homologene::taxData$tax_id,
+                     homologene::taxData$name_txt)
+    ## Add some common names for ease of use
+    dict <- c(dict,
+              "human"=9606,
+              "chimp"=9598,
+              "monkey"=9544,
+              "macaque"=9544,
+              "mouse"=10090,
+              "rat"=10116,
+              "zebrafish"=7955,
+              "fly"=7227,
+              "worm"=6239)
+    if(!any(species %in% names(dict))){
+        missing_species <- species[!(species %in% names(dict))]
+        message("::WARNING:: Species '",paste(missing_species,collapse=", "),
+                "' not found in taxa dict.\n",
+                "+ Defaulting to 'mouse'\n\n",
+                "+ All available species:\n")
+        print(data.frame(species=names(dict)) )
+        species <- "mouse"
+    }
+    return(dict[species])
+}
 
 
 
@@ -151,12 +175,6 @@ convert_orthologues <- function(gene_df,
     }
 
     printer("+ Searching for orthologues...",v=verbose)
-    taxaID_dict <- function(species=c("human","mouse","fly")){
-        dict <- c("human"=9606,
-                  "mouse"=10090,
-                  "fly"=7227)
-        return(dict[species])
-    }
     taxaID <- taxaID_dict(species=input_species)
     input_genes <- gene_df[[gene_col]]
     orths <- homologene::homologene(genes = input_genes,

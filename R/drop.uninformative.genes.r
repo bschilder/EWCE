@@ -106,9 +106,6 @@ construct_SCE <- function(exp,
                            replace_HDF5=F,
                            quicksave_HDF5=F,
                            verbose=T){
-    # library(DelayedArray)
-    # library(BiocParallel)
-    # library(SingleCellExperiment)
     core_allocation <- assign_cores(worker_cores = .90)
 
     message("+ Constructing SingleCellExperiment...")

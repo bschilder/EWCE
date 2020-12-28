@@ -5,7 +5,6 @@
 #' with buttons to download the table in multiple formats.
 #'
 #' @export
-#' @import DT
 create_DT <- function (DF, caption = "", scrollY = 400)
 {
     data <- DT::datatable(DF, caption = caption, extensions = "Buttons",

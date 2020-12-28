@@ -14,9 +14,7 @@
 #' gp <- plot_gene_metrics(ctd = ctd, metric = "specificity", level = 2, n_genes = 10)
 #' @export
 #' @import ggplot2
-#' @import reshape2
 #' @import dplyr
-#' @import plotly
 plot_gene_metrics <- function(ctd,
                               level=2,
                               metric="specificity",
@@ -37,7 +35,7 @@ plot_gene_metrics <- function(ctd,
         dplyr::mutate(factor(Cell_type,
                              levels = sort(unique(Cell_type)), ordered = T ))
 
-    library(ggplot2)
+    # library(ggplot2)
     gp <- ggplot(data = exp, aes_string(x="Cell_type", y=metric, fill="Cell_type")) +
         geom_bar(stat="identity", alpha=.75, show.legend = F) +
         facet_grid(Gene~.) +
