@@ -11,6 +11,7 @@ run_glmGamPoi_DE(
   pval_adjust_method = "BH",
   adj_pval_thresh = 1e-05,
   on_disk = T,
+  update_on_disk = T,
   return_as_SCE = T,
   verbose = T
 )
@@ -27,6 +28,6 @@ data("cortex_mrna")
 exp <- cortex_mrna$exp[1:300,]
 colData <- cortex_mrna$annot
 save_dir <- "~/Desktop/cortex_mrna_HDF5Array"
-sce <- convert_to_SCE(exp=exp, colData=colData, save_dir=save_dir, replace_HDF5 = T)
-exp <- run_glmGamPoi(sce, level2annot="level2class")
+sce <- construct_SCE(exp=exp, colData=colData, save_dir=save_dir, replace_HDF5 = T)
+exp <- run_glmGamPoi_DE(sce, level2annot="level2class")
 }

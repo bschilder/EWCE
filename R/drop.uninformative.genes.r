@@ -31,7 +31,7 @@ drop.uninformative.genes <- function(exp,
         message("Processing as DelayedArray...")
 
         if(class(exp)[1]!="SingleCellExperiment"){
-            sce <- convert_to_SCE(exp=exp,
+            sce <- construct_SCE(exp=exp,
                                   colData=colData,
                                   rowData=rowData,
                                   save_dir=sce_save_dir,
@@ -39,7 +39,7 @@ drop.uninformative.genes <- function(exp,
         }else {message("+ `exp` is of class 'SingleCellExperiment'"); sce <- exp}
 
         if((length(level2annot)>1) | (!level2annot %in% colnames(sce@colData)) ){
-            # Required because `convert_to_SCE()` does some filtering of cells
+            # Required because `construct_SCE()` does some filtering of cells
             ## (thus the original user-supplied vector (as level2annot) might not line up with the exp data any more).
             stop("+ `level2annot` must be the name of a column in colData (e.g. level2annot='celltype').")
         }
@@ -79,7 +79,7 @@ drop.uninformative.genes <- function(exp,
 
 
 
-#' Convert expression matrix to SingleCellExperiment
+#' Construct SingleCellExperiment
 #'
 #' @import DelayedArray
 #' @import BiocParallel
@@ -89,14 +89,14 @@ drop.uninformative.genes <- function(exp,
 #' exp <- cortex_mrna$exp
 #' colData <- cortex_mrna$annot
 #' save_dir <- "./cortex_mrna_HDF5Array"
-#' sce <- convert_to_SCE(exp=exp, colData=colData, save_dir=save_dir)
+#' sce <- construct_SCE(exp=exp, colData=colData, save_dir=save_dir)
 #' print(sce)
 #'  @export
 #'  @import DelayedArray
 #'  @import BiocParallel
 #'  @import parallel
 #'  @import SingleCellExperiment
-convert_to_SCE <- function(exp,
+construct_SCE <- function(exp,
                            colData=NULL,
                            rowData=NULL,
                            save_dir=NULL,
@@ -109,7 +109,7 @@ convert_to_SCE <- function(exp,
     # library(SingleCellExperiment)
     core_allocation <- assign_cores(worker_cores = .90)
 
-    message("+ Converting exp matrix into SingleCellExperiment...")
+    message("+ Constructing SingleCellExperiment...")
     sce <- SingleCellExperiment::SingleCellExperiment(
         assays      = list(raw = DelayedArray::DelayedArray(exp)),
         colData     = colData,
@@ -122,24 +122,11 @@ convert_to_SCE <- function(exp,
         # sce_sub <- sce[sample(non_empty_rows,300), non_empty_cols]
         sce <- sce[non_empty_rows, non_empty_cols]
     }
-    if(!is.null(save_dir)){
-        if(quicksave_HDF5){
-            message("+ Updating existing HDF5...")
-            sce <- HDF5Array::quickResaveHDF5SummarizedExperiment(x=sce,
-                                                                  verbose=verbose)
-        } else {
-            if(!dir.exists(save_dir) | replace_HDF5){
-                message("+ Writing new HDF5...")
-                sce <- HDF5Array::saveHDF5SummarizedExperiment(x=sce,
-                                                               dir=save_dir,
-                                                               verbose=verbose,
-                                                               replace=replace_HDF5)
-            } else {
-                message("+ Returning existing SCE object.")
-            }
-        }
-
-    }
+    sce <- save_SCE(sce=sce,
+                    save_dir=save_dir,
+                    quicksave_HDF5=quicksave_HDF5,
+                    replace_HDF5=replace_HDF5,
+                    verbose=verbose)
     return(sce)
 }
 
@@ -159,8 +146,8 @@ convert_to_SCE <- function(exp,
 #' exp <- cortex_mrna$exp[1:300,]
 #' colData <- cortex_mrna$annot
 #' save_dir <- "~/Desktop/cortex_mrna_HDF5Array"
-#' sce <- convert_to_SCE(exp=exp, colData=colData, save_dir=save_dir, replace_HDF5 = T)
-#' exp <- run_glmGamPoi(sce, level2annot="level2class")
+#' sce <- construct_SCE(exp=exp, colData=colData, save_dir=save_dir, replace_HDF5 = T)
+#' exp <- run_glmGamPoi_DE(sce, level2annot="level2class")
 #' @import glmGamPoi
 run_glmGamPoi_DE <- function(sce,
                              level2annot,
@@ -168,15 +155,27 @@ run_glmGamPoi_DE <- function(sce,
                              pval_adjust_method="BH",
                              adj_pval_thresh=0.00001,
                              on_disk=T,
+                             update_on_disk=T,
                              return_as_SCE=T,
                              verbose=T){
     level2annot <- as.factor(sce[[level2annot]])
     mod_matrix  <- model.matrix(~level2annot)
     fit <- glmGamPoi::glm_gp(sce,
                              design = mod_matrix,
+                             # on_disk=F when testing on subsets of SCE
                              on_disk = on_disk,
                              verbose = verbose)
-    # fit_celltypes
+    # Save fitted model as intermediate
+    sce_dir <- dirname(DelayedArray::seed(SummarizedExperiment::assay(sce))@filepath)
+    fit_path <- file.path(sce_dir,paste(basename(sce_dir),"glm_gp.RDS",sep="."))
+    messager("+ Saving intermediate file ==>",fit_path)
+    saveRDS(fit, fit_path)
+
+    # Run DGE
+    # intercept <- colnames(fit$Beta)[1]
+    # normed <- (fit$Beta[,1] / sum(fit$Beta[,1]))
+    # normed_scaled <- scales::rescale(normed, to = c(0,1))
+    # fit$Beta <- cbind(fit$Beta, Intercept_normed=normed_scaled)
     de_res <- glmGamPoi::test_de(fit,
                                  # `pseudobulk_by` reduces false positives drastically
                                  pseudobulk_by = pseudobulk_by,
@@ -189,6 +188,12 @@ run_glmGamPoi_DE <- function(sce,
         colData     = sce@colData,
         rowData     = de_res
     )
+
+    if(update_on_disk){
+        messager("+ Updating the SCE object with the DGE results dataframe added to it...")
+        sce_de <- HDF5Array::quickResaveHDF5SummarizedExperiment(sce_de, verbose=verbose)
+    }
+
     # Only return deferentially expressed genes
     sce_de <- subset(sce_de, adj_pval<adj_pval_thresh)
     genes_dropped <- nrow(sce)-nrow(sce_de)
