@@ -3,6 +3,16 @@
 \name{ingest_data}
 \alias{ingest_data}
 \title{Import and standardize scRNAseq data across different formats}
+\source{
+\href{https://github.com/cellgeni/sceasy}{sceasy}
+\href{https://mojaveazure.github.io/seurat-disk/articles/convert-anndata.html}{SeuratDisk}
+\href{https://github.com/rcannood/anndata}{anndata (R)}
+\href{https://anndata.readthedocs.io/en/latest/}{anndata (python)}
+\href{https://satijalab.org/loomR/loomR_tutorial.html}{loomR}
+\href{https://bioconductor.org/packages/release/bioc/vignettes/SingleCellExperiment/inst/doc/intro.html}{SingleCellExperiment}
+\href{https://petehaitch.github.io/BioC2020_DelayedArray_workshop/articles/Effectively_using_the_DelayedArray_framework_for_users.html}{DelayedArray workshop}
+\href{https://theislab.github.io/zellkonverter/articles/zellkonverter.html}{zellkonverter}
+}
 \usage{
 ingest_data(
   obj,

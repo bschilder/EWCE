@@ -3,6 +3,9 @@
 \name{drop.uninformative.genes}
 \alias{drop.uninformative.genes}
 \title{drop.uninformative.genes}
+\source{
+#' \href{https://petehaitch.github.io/BioC2020_DelayedArray_workshop/articles/Effectively_using_the_DelayedArray_framework_for_users.html}{DelayedArray workshop}
+}
 \usage{
 drop.uninformative.genes(
   exp,

@@ -3,6 +3,9 @@
 \name{generate.celltype.data}
 \alias{generate.celltype.data}
 \title{generate.celltype.data}
+\source{
+#' \href{https://petehaitch.github.io/BioC2020_DelayedArray_workshop/articles/Effectively_using_the_DelayedArray_framework_for_users.html}{DelayedArray workshop}
+}
 \usage{
 generate.celltype.data(
   exp,

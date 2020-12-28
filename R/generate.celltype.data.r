@@ -43,6 +43,8 @@
 #' @importFrom Matrix Matrix
 #' @import RNOmni
 #' @import ggdendro
+#' @source
+#' #' \href{https://petehaitch.github.io/BioC2020_DelayedArray_workshop/articles/Effectively_using_the_DelayedArray_framework_for_users.html}{DelayedArray workshop}
 generate.celltype.data <- function(exp,
                                    annotLevels,
                                    groupName,

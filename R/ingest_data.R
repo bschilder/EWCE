@@ -1,7 +1,4 @@
 
-## Very relevant pacakge
-# sceasy: https://github.com/cellgeni/sceasy
-
 
 
 #' Import and standardize scRNAseq data across different formats
@@ -64,6 +61,7 @@
 #' ## From disk
 #' sce <- ingest_data(obj="~/Desktop/pbmc_small.loom")
 #'
+#' @export
 #' @import sceasy
 #' @import Seurat
 #' @import SeuratDisk
@@ -71,6 +69,15 @@
 #' @import HDF5Array
 #' @import DelayedArray
 #' @import dplyr
+#' @source
+#' \href{https://github.com/cellgeni/sceasy}{sceasy}
+#' \href{https://mojaveazure.github.io/seurat-disk/articles/convert-anndata.html}{SeuratDisk}
+#' \href{https://github.com/rcannood/anndata}{anndata (R)}
+#' \href{https://anndata.readthedocs.io/en/latest/}{anndata (python)}
+#' \href{https://satijalab.org/loomR/loomR_tutorial.html}{loomR}
+#' \href{https://bioconductor.org/packages/release/bioc/vignettes/SingleCellExperiment/inst/doc/intro.html}{SingleCellExperiment}
+#' \href{https://petehaitch.github.io/BioC2020_DelayedArray_workshop/articles/Effectively_using_the_DelayedArray_framework_for_users.html}{DelayedArray workshop}
+#' \href{https://theislab.github.io/zellkonverter/articles/zellkonverter.html}{zellkonverter}
 ingest_data <- function(obj,
                         filetype="guess",
                         custom_reader=NULL,
@@ -162,7 +169,7 @@ read_scRNAseq_data <- function(obj,
         #### H5Seurat ####
         if((endsWith(tolower(obj), suffix=".h5seurat")) | tolower(filetype)=="h5seurat"){
             messager("+ h5Seurat format (.h5Seurat) detected. Importing as Seurat object...",v=verbose)
-            object <- SeuratDisk::LoadH5Seurat(file = obj)
+            object <- SeuratDisk::LoadH5Seurat(file = obj, ...)
             return(object)
         }
         #### Loom ####
@@ -177,7 +184,7 @@ read_scRNAseq_data <- function(obj,
 
             #### sceasy method
             rhdf5::h5disableFileLocking() ## Causes error otherwise
-            object <- sceasy::convertFormat(obj, from="loom", to="sce")
+            object <- sceasy::convertFormat(obj, from="loom", to="sce", ...)
                                             # outFile = gsub(".loom",".sce.rds",obj))
             return(object)
         }

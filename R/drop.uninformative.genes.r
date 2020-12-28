@@ -14,6 +14,8 @@
 #' @export
 #' @import limma
 #' @import stats
+#' @source
+#' #' \href{https://petehaitch.github.io/BioC2020_DelayedArray_workshop/articles/Effectively_using_the_DelayedArray_framework_for_users.html}{DelayedArray workshop}
 drop.uninformative.genes <- function(exp,
                                      level2annot,
                                      as_DelayedArray=F,
