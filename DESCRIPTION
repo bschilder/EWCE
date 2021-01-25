@@ -33,7 +33,7 @@ Imports:
     RNOmni,
     sctransform
 Remotes:
-    github:ChristophH/sctransform@*release,
+    github::ChristophH/sctransform@*release,
     github::mojaveazure/seurat-disk,
     github::cellgeni/sceasy
 Suggests:
