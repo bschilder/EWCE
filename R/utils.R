@@ -58,3 +58,29 @@ assign_cores <- function(worker_cores=.90,
                 reserved_cores=reserved_cores,
                 total_cores=total_cores))
 }
+
+
+
+calc_quantiles <- function(v,
+                           n_quantiles=10,
+                           report_filters=T){
+    calc_percentile <- stats::ecdf(1:n_quantiles)
+    quantiles <- calc_percentile(v)
+    # Report the number of items left after filtering at each quantile
+    if(report_filters){
+        print("N remaining at each quantile filter:")
+        genes_left <- lapply(unique(quantiles), function(x){
+            setNames(length(v[quantiles>=x]), paste0("≥",x))
+        }) %>% unlist() %>% sort() %>% rev()
+        print(genes_left)
+    }
+    return(quantiles)
+}
+
+sce_filepath <- function(sce,
+                         sce_save_dir=NULL){
+    file_info <- DelayedArray::seed(SummarizedExperiment::assay(sce))
+    if("filepath" %in% slotNames(file_info)){
+        return(file_info@filepath)
+    } else { return(NULL) }
+}

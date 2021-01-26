@@ -5,8 +5,22 @@
 #' is less than a strict p-threshold, then the gene is dropped.
 #'
 #' @param exp Expression matrix with gene names as rownames.
-#' @param level2annot Array of cell types, with each sequentially corresponding a column in the expression matrix
-#' @return exp Expression matrix with gene names as rownames.
+#' @param `level2annot Array of cell types, with each sequentially corresponding a column in the expression matrix
+#' @param DGE_method Which method to use for the Differential Gene Expression (DGE) step.
+#' @param return_sce Whether to return the filtered results
+#' as an expression matrix or a \pkg{SingleCellExperiment}.
+#' @param min_variance_decile If `min_variance_decile!=NULL`, calculates the variance of the mean gene expression  across `level2annot` (i.e. cell-types),
+#' and then removes any genes that are below `min_variance_decile` (on a 0-1 scale).
+#' @param adj_pval_thresh Minimum differential expression significance
+#' that a gene must demonstrate across `level2annot` (i.e. cell-types).
+#' @param drop_nonhuman_genes Whether to drop genes that don't have human orthologues.
+#' @param input_species The species that the `exp` dataset comes from
+#'  (to be used during the non-orthologues filtering step).
+#' @param verbose Whether to print messages (`T` or `F`).
+#' @param ... Additional arguments to be passed to the selected DGE method.
+#'
+#' @return exp Expression matrix with gene names as rownames,
+#' or a \pkg{SingleCellExperiment} if \code{return_sce=T}.
 #' @examples
 #' data("cortex_mrna")
 #' cortex_mrna$exp = cortex_mrna$exp[1:300,] # Use only a subset of genes to keep the example quick
@@ -18,194 +32,252 @@
 #' #' \href{https://petehaitch.github.io/BioC2020_DelayedArray_workshop/articles/Effectively_using_the_DelayedArray_framework_for_users.html}{DelayedArray workshop}
 drop.uninformative.genes <- function(exp,
                                      level2annot,
-                                     as_DelayedArray=F,
-                                     colData=NULL,
-                                     rowData=NULL,
-                                     sce_save_dir=NULL,
-                                     pseudobulk_by=NULL,
+                                     DGE_method="limma",
+                                     min_variance_decile=NULL,
                                      adj_pval_thresh=0.00001,
-                                     verbose=T){
-    # Allow user to supply either the vector
-    ## or simply the name of the column in the colData
-    if(as_DelayedArray){
-        #### DelayedArray method ####
+                                     drop_nonhuman_genes=F,
+                                     input_species=NULL,
+                                     sce_save_dir=NULL,
+                                     return_sce=F,
+                                     verbose=T,
+                                     ...){
+    DGE_method <- if(is.null(DGE_method)) "" else DGE_method
+    #### Convert to SCE format ####
+    sce <- ingest_data(obj = exp)
+    ### Remove non-expressed genes ####
+    printer("+ Removing non-expressed genes...",v=verbose)
+    exp <- SummarizedExperiment::assay(sce)
+    summed <- DelayedArray::rowSums(exp)
+    # Subset the sce object
+    sce = sce[summed!=0,]
+
+    #### Remove non-orthologues ####
+    if(drop_nonhuman_genes){
+        orths <- convert_orthologues(gene_df=exp,
+                                     gene_col="rownames",
+                                     input_species=input_species,
+                                     drop_nonhuman_genes=T,
+                                     one_to_one_only=T,
+                                     genes_as_rownames=T,
+                                     verbose=verbose)
+        sce <- sce[orths$Gene_orig,]
+    }
+
+    ### Simple variance ####
+    if(!is.null(min_variance_decile)){
+        # Use variance of mean gene expression across cell types
+        # as a fast and simple way to select genes
+        sce <- DelayedArray_filter_variance_quantiles(sce = sce,
+                                                           level2annot = level2annot,
+                                                           n_quantiles = 10,
+                                                           min_variance_decile = min_variance_decile,
+                                                           verbose = verbose)
+    }
+
+    # Make sure the matrix hasn't been converted to characters
+    if(class(exp[1,1])=="character"){
+        exp <- SummarizedExperiment::assay(sce)
+        exp = as.matrix(exp)
+        storage.mode(exp) <- "numeric"
+        SummarizedExperiment::assay(sce) <- exp
+    }
+
+    # Run DGE
+    start <- Sys.time()
+    #### Limma ####
+    # Modified original method
+    if(tolower(DGE_method)=="limma"){
+        eb <- run_limma(sce = sce,
+                        level2annot = level2annot,
+                        verbose = verbose,
+                        ...)
+        pF <- stats::p.adjust(eb$F.p.value, method="BH")
+        keep_genes <- pF<adj_pval_thresh
+        printer(paste(nrow(sce)-sum(keep_genes),"/",nrow(sce),
+                      "genes dropped @ DGE adj_pval_thresh <",adj_pval_thresh), v=verbose)
+        sce <- sce[keep_genes,]
+    }
+
+    #### DESeq2 ####
+    if(tolower(DGE_method)=="deseq2"){
+        dds_res <- run_DESeq2(sce=sce,
+                              level2annot = level2annot,
+                              verbose = verbose,
+                              ...)
+        dds_res <- subset(dds_res, padj<adj_pval_thresh)
+        printer(paste(nrow(sce)-nrow(dds_res),"/",nrow(sce),
+                      "genes dropped @ DGE adj_pval_thresh <",adj_pval_thresh), v=verbose)
+        # Filter original SCE
+        sce <- sce[row.names(dds_res), ]
+    }
+
+    #### glmGamPoi ####
+    if(tolower(DGE_method)=="glmgampoi"){
         # Best for large datasets that can't fit into memory.
-        message("Processing as DelayedArray...")
-
-        if(class(exp)[1]!="SingleCellExperiment"){
-            sce <- construct_SCE(exp=exp,
-                                  colData=colData,
-                                  rowData=rowData,
-                                  save_dir=sce_save_dir,
-                                  verbose=verbose)
-        }else {message("+ `exp` is of class 'SingleCellExperiment'"); sce <- exp}
-
-        if((length(level2annot)>1) | (!level2annot %in% colnames(sce@colData)) ){
-            # Required because `construct_SCE()` does some filtering of cells
-            ## (thus the original user-supplied vector (as level2annot) might not line up with the exp data any more).
-            stop("+ `level2annot` must be the name of a column in colData (e.g. level2annot='celltype').")
-        }
-        message("+ Running Gamma-Poisson Generalized Linear regression (glmGamPoi)...")
+        messager("DGE:: glmGamPoi...",v=verbose)
         sce_de <- run_glmGamPoi_DE(sce,
-                                   level2annot,
-                                   pseudobulk_by=pseudobulk_by,
+                                   level2annot=level2annot,
                                    pval_adjust_method="BH",
                                    adj_pval_thresh=adj_pval_thresh,
                                    on_disk=T,
                                    return_as_SCE=T,
-                                   verbose=verbose)
-        return(sce_de)
-    } else {
-        #### Original method ####
-        # Best for smaller datasets that can fit into memory)
-        message("Processing in-memory...")
-        if(class(exp[1,1])=="character"){
-            exp = as.matrix(exp)
-            storage.mode(exp) <- "numeric"
-        }
-        if(length(level2annot)==1 & (!is.null(colData)) ){
-            level2annot <- colData[[level2annot]]
-        }
-        level2annot = as.factor(as.character(level2annot))
-        summed = apply(exp,1,sum)
-        exp = exp[summed!=0,]
-        mod_matrix  = model.matrix(~level2annot)
-        fit = limma::lmFit(exp, mod_matrix)
-        eb = limma::eBayes(fit)
-        pF = stats::p.adjust(eb$F.p.value,method="BH")
-        exp = exp[pF<0.00001,]
-        return(exp)
+                                   sce_save_dir=sce_save_dir,
+                                   verbose=verbose,
+                                   ...)
+        printer(paste(nrow(sce)-nrow(sce_de),"/",nrow(sce),
+                      "genes dropped @ DGE adj_pval_thresh <",adj_pval_thresh), v=verbose)
+        sce <- sce_de
+    }
+    # Report time elapsed
+    end <- Sys.time()
+    print(end-start)
+    #### Return results ####
+    if(return_sce){
+        return(sce)
+    }else{
+        return(SummarizedExperiment::assay(exp))
     }
 }
 
 
-
-
-#' Construct SingleCellExperiment
-#'
-#' @import DelayedArray
-#' @import BiocParallel
-#' @import HDF5Array
-#' @examples
-#' data("cortex_mrna")
-#' exp <- cortex_mrna$exp
-#' colData <- cortex_mrna$annot
-#' save_dir <- "./cortex_mrna_HDF5Array"
-#' sce <- construct_SCE(exp=exp, colData=colData, save_dir=save_dir)
-#' print(sce)
-#'  @export
-#'  @import DelayedArray
-#'  @import BiocParallel
-#'  @import parallel
-#'  @import SingleCellExperiment
-construct_SCE <- function(exp,
-                           colData=NULL,
-                           rowData=NULL,
-                           save_dir=NULL,
-                           drop_empty=T,
-                           replace_HDF5=F,
-                           quicksave_HDF5=F,
-                           verbose=T){
-    core_allocation <- assign_cores(worker_cores = .90)
-
-    message("+ Constructing SingleCellExperiment...")
-    sce <- SingleCellExperiment::SingleCellExperiment(
-        assays      = list(raw = DelayedArray::DelayedArray(exp)),
-        colData     = colData,
-        rowData     = rowData
-    )
-    if(drop_empty){
-        message("+ Dropping rows and/or cols with sums==0...")
-        non_empty_rows <- which(DelayedMatrixStats::rowSums2(SummarizedExperiment::assay(sce)) > 0)
-        non_empty_cols <- which(DelayedMatrixStats::colSums2(SummarizedExperiment::assay(sce)) > 0)
-        # sce_sub <- sce[sample(non_empty_rows,300), non_empty_cols]
-        sce <- sce[non_empty_rows, non_empty_cols]
-    }
-    sce <- save_SCE(sce=sce,
-                    save_dir=save_dir,
-                    quicksave_HDF5=quicksave_HDF5,
-                    replace_HDF5=replace_HDF5,
-                    verbose=verbose)
+DelayedArray_filter_variance_quantiles <- function(sce,
+                                                   level2annot,
+                                                   n_quantiles=10,
+                                                   min_variance_decile=.5,
+                                                   verbose=T){
+    printer("+ Filtering by variance deciles...",v=verbose)
+    #### Calculate mean gene expression per cell-type ####
+    sce_means <- DelayedArray_grouped_stats(sce = sce,
+                                            grouping_var = level2annot,
+                                            stat = "mean",
+                                            return_sce = F)
+    #### Calculate gene variance across cell-types means ####
+    gene_variance <- setNames(DelayedMatrixStats::rowVars(sce_means),
+                              row.names(sce_means))
+    #### Convert to deciles ####
+    deciles <- calc_quantiles(v = gene_variance,
+                              n_quantiles = n_quantiles,
+                              report_filters = verbose)
+    #### Remove genes below the min_variance_decile ####
+    gene_variance <- gene_variance[deciles>=min_variance_decile]
+    # DelayedMatrixStats::rowQuantiles(gene_variance)
+    # hist(log(gene_variance), breaks=50)
+    printer(paste(nrow(sce)-length(gene_variance),"/",nrow(sce),
+                  "genes dropped @ DGE variance_decile ≥",min_variance_decile), v=verbose)
+    sce <- sce[names(gene_variance),]
     return(sce)
 }
 
 
 
+DelayedArray_grouped_stats <- function(sce,
+                                       grouping_var,
+                                       return_sce=T,
+                                       stat="mean"){
+    exp <- SummarizedExperiment::assay(sce)#DelayedArray::t.Array()
+    cdata <- SummarizedExperiment::colData(sce)
+    if(!grouping_var%in%colnames(cdata)) stop(grouping_var," is not a column in colData(sce).")
+    core_allocation <- assign_cores(worker_cores=.90, verbose=F)
 
+    lv2_groups <- unique(cdata[[grouping_var]])
 
-#' Run Gamma-Poisson Generalized Linear regression (glmGamPoi)
-#'
-#' Installation troubleshooting:
-#' 1. Try to install using  Bioconductor: \code{BiocManager::install("glmGamPoi")}
-#' 2. If that fails, try installing directly from GitHub: \code{devtools::install_github("const-ae/glmGamPoi")}
-#' 3. If that fails due to an error like \code{ld: warning: directory not found for option '-L/usr/local/gfortran/lib/gcc/x86_64-apple-darwin15/6.1.0'}
-#' follow \href{https://stackoverflow.com/questions/35999874/mac-os-x-r-error-ld-warning-directory-not-found-for-option}{these instructions} to fix this.
-#' @examples
-#' data("cortex_mrna")
-#' exp <- cortex_mrna$exp[1:300,]
-#' colData <- cortex_mrna$annot
-#' save_dir <- "~/Desktop/cortex_mrna_HDF5Array"
-#' sce <- construct_SCE(exp=exp, colData=colData, save_dir=save_dir, replace_HDF5 = T)
-#' exp <- run_glmGamPoi_DE(sce, level2annot="level2class")
-#' @import glmGamPoi
-run_glmGamPoi_DE <- function(sce,
-                             level2annot,
-                             pseudobulk_by=NULL,
-                             pval_adjust_method="BH",
-                             adj_pval_thresh=0.00001,
-                             on_disk=T,
-                             update_on_disk=T,
-                             return_as_SCE=T,
-                             verbose=T){
-    level2annot <- as.factor(sce[[level2annot]])
-    mod_matrix  <- model.matrix(~level2annot)
-    fit <- glmGamPoi::glm_gp(sce,
-                             design = mod_matrix,
-                             # on_disk=F when testing on subsets of SCE
-                             on_disk = on_disk,
-                             verbose = verbose)
-    # Save fitted model as intermediate
-    sce_dir <- dirname(DelayedArray::seed(SummarizedExperiment::assay(sce))@filepath)
-    fit_path <- file.path(sce_dir,paste(basename(sce_dir),"glm_gp.RDS",sep="."))
-    messager("+ Saving intermediate file ==>",fit_path)
-    saveRDS(fit, fit_path)
-
-    # Run DGE
-    # intercept <- colnames(fit$Beta)[1]
-    # normed <- (fit$Beta[,1] / sum(fit$Beta[,1]))
-    # normed_scaled <- scales::rescale(normed, to = c(0,1))
-    # fit$Beta <- cbind(fit$Beta, Intercept_normed=normed_scaled)
-    de_res <- glmGamPoi::test_de(fit,
-                                 # `pseudobulk_by` reduces false positives drastically
-                                 pseudobulk_by = pseudobulk_by,
-                                 contrast =`(Intercept)`,
-                                 pval_adjust_method = pval_adjust_method,
-                                 verbose = verbose)
-    # Add DGE results back into SCE object
-    sce_de <- SingleCellExperiment::SingleCellExperiment(
-        assays      = list(raw = assay(sce)),
-        colData     = sce@colData,
-        rowData     = de_res
-    )
-
-    if(update_on_disk){
-        messager("+ Updating the SCE object with the DGE results dataframe added to it...")
-        sce_de <- HDF5Array::quickResaveHDF5SummarizedExperiment(sce_de, verbose=verbose)
-    }
-
-    # Only return deferentially expressed genes
-    sce_de <- subset(sce_de, adj_pval<adj_pval_thresh)
-    genes_dropped <- nrow(sce)-nrow(sce_de)
-    message("+ ",genes_dropped," / ",nrow(sce),
-            " (",round(genes_dropped/nrow(sce)*100, 1),"%)",
-            " genes dropped due to lack of differential expression ",
-            "between level2 annotations.")
-    if(return_as_SCE){
-        return(sce_de)
-    }else {
-        return(as(SummarizedExperiment::assay(sce_de), "matrix"))
-    }
+    exp_agg <- parallel::mclapply(lv2_groups, function(x){
+        if(stat=="mean"){
+            agg <- DelayedMatrixStats::rowMeans2(exp, cols = cdata[[grouping_var]]==x)
+        }
+        if(stat=="var"){
+            agg <- DelayedMatrixStats::rowVars(exp, cols = cdata[[grouping_var]]==x)
+        }
+        return(agg)
+    }, mc.cores = core_allocation$worker_cores
+    ) %>%
+        `names<-`(lv2_groups) %>%
+        data.table::as.data.table() %>%
+        `rownames<-`(row.names(exp)) %>%
+        DelayedArray::DelayedArray()
+    if(return_sce) {
+        sce_agg <- ingest_data(exp_agg, verbose = F)
+        cdata <- SummarizedExperiment::colData(sce_agg)
+        cdata[[grouping_var]] <- row.names(cdata)
+        SummarizedExperiment::colData(sce_agg) <- cdata
+        return(sce_agg)
+    } else{ return(exp_agg) }
 }
+
+
+
+run_limma <- function(sce,
+                      level2annot,
+                      verbose=T,
+                      ...){
+    messager("DGE:: Limma...",v=verbose)
+    exp <- SummarizedExperiment::assay(sce)
+    cdata <- SummarizedExperiment::colData(sce)
+    ## Prepare groupings
+    if(length(level2annot)==1){
+        level2_options <- cdata[[level2annot]]
+    } else { level2_options <- level2annot }
+    level2_options <- as.factor(as.character(level2_options))
+
+    mod_matrix  = model.matrix(~level2_options)
+    fit = limma::lmFit(exp, mod_matrix, ...)
+    eb = limma::eBayes(fit)
+    return(eb)
+}
+
+
+
+run_DESeq2 <- function(sce,
+                       level2annot,
+                       verbose=T,
+                       ...){
+    messager("DGE:: DESeq2...",v=verbose)
+    if(!"DESeq2" %in% row.names(installed.packages())){
+        stop("Please install DESeq2 first: BiocManager::install('DESeq2')")
+    }
+    core_allocation <- assign_cores(worker_cores=.90)
+    exp <- SummarizedExperiment::assay(sce)
+    cdata <- SummarizedExperiment::colData(sce)
+    # NOTE:: When you're running DESeq2 on sparse SCE data,
+    ## there are two ways to avoid issues when DESeq() tries to log your data.
+    ## 1) add 1 to you expression matrix (much faster).
+    ## 2) set sfType = "iterate" to enable iterative size factor estimation (veerrrry slow).
+    dds <- DESeq2::DESeqDataSetFromMatrix(exp+1,
+                                          colData = cdata,
+                                          design = formula(paste("~",level2annot)))
+    dds <- DESeq2::DESeq(dds,
+                         # Best for scRNAseq data.
+                         test="LRT",
+                         # DESeq2 v1.31.10 (not yet released on BioC)
+                         # now has glmGamPoi directly integrated directly!
+                         ## https://github.com/mikelove/DESeq2/issues/29
+                         ## default="parametric"
+                         # fitType="glmGamPoi",
+                         # sfType = "iterate",
+                         parallel = T,
+                         ...)
+    dds_res <- DESeq2::results(dds)
+    return(dds_res)
+}
+
+
+
+#### OG drop.uninformative.genes ####
+# drop.uninformative.genes <- function(exp,level2annot){
+#     if(class(exp[1,1])=="character"){
+#         exp = as.matrix(exp)
+#         storage.mode(exp) <- "numeric"
+#     }
+#     level2annot = as.character(level2annot)
+#     summed = apply(exp,1,sum)
+#     exp = exp[summed!=0,]
+#     mod  = model.matrix(~level2annot)
+#     fit = lmFit(exp,mod)
+#     eb = eBayes(fit)
+#     pF = p.adjust(eb$F.p.value,method="BH")
+#     exp = exp[pF<0.00001,]
+#     return(exp)
+# }
 
 
 

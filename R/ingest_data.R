@@ -71,6 +71,7 @@
 #' \href{https://bioconductor.org/packages/release/bioc/vignettes/SingleCellExperiment/inst/doc/intro.html}{SingleCellExperiment}
 #' \href{https://petehaitch.github.io/BioC2020_DelayedArray_workshop/articles/Effectively_using_the_DelayedArray_framework_for_users.html}{DelayedArray workshop}
 #' \href{https://theislab.github.io/zellkonverter/articles/zellkonverter.html}{zellkonverter}
+#' @export
 ingest_data <- function(obj,
                         filetype="guess",
                         custom_reader=NULL,
@@ -110,6 +111,7 @@ read_scRNAseq_data <- function(obj,
         object <- custom_reader(obj, ...)
         return(object)
     }
+
     if(class(obj)[1]=="character"){
         messager("+ Reading from disk...")
         #### Generic RDS ####
@@ -202,23 +204,34 @@ convert_to_SCE <- function(object,
     messager("Converting formats:",v=verbose)
     core_allocation <- assign_cores(worker_cores = .90)
 
-    matrix_classes <- c("data.table","data.frame","tbl_df","tbl","matrix","Matrix","array","DelayedArray",names(getClass("Matrix")@subclasses)) # more than 40 ..
+    ewce_classes <- "EWCE_list"
+    matrix_classes <- c("data.table","data.frame","tbl_df","tbl","matrix","Matrix","array","DelayedArray","DelayedMatrix",names(getClass("Matrix")@subclasses)) # more than 40 ..
     loom_classes <-  c("loom","H5File","H5RefClass")
     sce_classes <- c("SingleCellLoomExperiment","SingleCellExperiment","SummarizedExperiment")
     anndata_classes <- c("AnnData","AnnDataR6","AnnDataR6R6")
     seurat_classes <- c("Seurat")
-    supported_classes <- c(matrix_classes, loom_classes, sce_classes, anndata_classes, seurat_classes)
+    supported_classes <- c(matrix_classes, loom_classes, sce_classes, anndata_classes, seurat_classes, ewce_classes)
     supported_classes_print <- c("matrix (any subclass)",loom_classes, sce_classes, anndata_classes, seurat_classes)
+    if(class(object)[1]=="list" & all(c("exp","annot") %in% names(object)) ){
+        class(object) <- "EWCE_list"
+    }
 
-
-
-    #### Check if class is suppported ####
+    #### Check if class is supported ####
     if(!class(object)[1] %in% supported_classes){
-        stop("Unsuppported class detected: ",class(object),"\n\n",
+        stop("Unsupported class detected: ",class(object),"\n\n",
              "Data object must be at least one of the following classes:\n\n",
              paste(supported_classes_print, collapse = ", "))
     }
-
+    ### EWCE_list ####
+    if(class(object)[1] %in% ewce_classes){
+        messager("+ EWCE_list ==> SingleCellExperiment",v=verbose)
+        sce <- SingleCellExperiment::SingleCellExperiment(
+            assays      = list(raw = DelayedArray::DelayedArray(Matrix::Matrix(as.matrix(object$exp), sparse = T))),
+            colData     =  object$annot,
+            rowData     =  row.names(object$exp)
+        )
+        return(sce)
+    }
 
     #### Matrices ####
     if(class(object)[1] %in% matrix_classes){
@@ -260,8 +273,7 @@ convert_to_SCE <- function(object,
     if(class(object)[1] %in% sce_classes){
         messager("+ == SummarizedExperiment",v=verbose)
         return(object)
-    } #
-
+    }
 }
 
 
@@ -272,13 +284,15 @@ save_SCE <- function(sce,
                      replace_HDF5=F,
                      verbose=T){
     if(!is.null(save_dir)){
-        if(quicksave_HDF5){
+        if(quicksave_HDF5 & file.exists(file.path(save_dir,"assays.h5")) & (replace_HDF5==F)){
             messager("+ Updating existing HDF5...",v=verbose)
             sce <- HDF5Array::quickResaveHDF5SummarizedExperiment(x=sce,
                                                                   verbose=verbose)
         } else {
-            if(!dir.exists(save_dir) | replace_HDF5){
+            if( (!dir.exists(save_dir)) | (replace_HDF5) ){
                 messager("+ Writing new HDF5...",v=verbose)
+                # DON'T create the HDF5 dir itself (will return an error about overwriting)
+                dir.create(dirname(save_dir), showWarnings = F, recursive = T)
                 sce <- HDF5Array::saveHDF5SummarizedExperiment(x=sce,
                                                                dir=save_dir,
                                                                verbose=verbose,

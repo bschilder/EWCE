@@ -154,9 +154,11 @@ taxaID_dict <- function(species=c("human","mouse","fly")){
 #' @return Data.frame with the gene symbols of the input species ("Gene_orig")
 #' and converted human orthologues ("Gene").
 #' @import homologene
+#' @export
 convert_orthologues <- function(gene_df,
                                 gene_col="Gene",
                                 input_species="mouse",
+                                output_species="human",
                                 drop_nonhuman_genes=F,
                                 one_to_one_only=T,
                                 genes_as_rownames=F,
@@ -176,10 +178,11 @@ convert_orthologues <- function(gene_df,
 
     printer("+ Searching for orthologues...",v=verbose)
     taxaID <- taxaID_dict(species=input_species)
+    taxaID_out <- taxaID_dict(species=output_species)
     input_genes <- gene_df[[gene_col]]
     orths <- homologene::homologene(genes = input_genes,
                                     inTax = unname(taxaID),
-                                    outTax = 9606)
+                                    outTax = taxaID_out)
     orths <- orths[orths[,1] %in% input_genes,]
     orths_key <- setNames(orths[,2], orths[,1])
     gene_df <- dplyr::rename(gene_df, Gene_orig=all_of(gene_col))

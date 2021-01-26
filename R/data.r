@@ -190,3 +190,25 @@
 #' mgi_synonym_data = mgi_data[!mgi_data$Marker.Synonyms..pipe.separated.=="",]
 #' save(mgi_synonym_data,file="data/mgi_synonym_data.rda", compress='xz')
 'mgi_synonym_data'
+
+
+#' A small example version of the PBMC dataset (Seurat format)
+#'
+#' @references
+#' \href{Seurat::pbmc_small}{https://rdrr.io/cran/Seurat/man/pbmc_small.html}.
+#' @inherit Seurat::pbmc_small
+#' @source
+#' library(Seurat)
+#' data(pbmc_small)
+#' pbmc_small <- Seurat::UpdateSeuratObject(pbmc_small)
+#' usethis::use_data(pbmc_small, internal = F, overwrite = T)
+"pbmc_small"
+
+
+
+
+
+
+
+
+
