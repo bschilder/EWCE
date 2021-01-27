@@ -37,16 +37,13 @@ knitr::opts_chunk$set(tidy         = FALSE,
 
 # Citation
 
-If you use the EWCE package as well then please cite
+If you use the EWCE package as well then please cite:
 
-[Skene, et al. Identification of Vulnerable Cell Types in Major Brain Disorders Using Single Cell Transcriptomes and Expression Weighted Cell Type Enrichment.
-Front. Neurosci, 2016.](https://www.frontiersin.org/articles/10.3389/fnins.2016.00016/full)
+[Identification of Vulnerable Cell Types in Major Brain Disorders Using Single Cell Transcriptomes and Expression Weighted Cell Type Enrichment](https://www.frontiersin.org/articles/10.3389/fnins.2016.00016/full) [@skene2016]
 
-If you use the cortex/hippocampus single cell data associated with this package then please cite the following papers:
+If you use the cortex/hippocampus single-cell data associated with this package then please cite the following paper:
 
-[Zeisel, et al. Cell types in the mouse cortex and hippocampus revealed by single-cell RNA-seq.
-Science, 2015.](http://www.sciencemag.org/content/early/2015/02/18/science.aaa1934.abstract)
-
+[Cell types in the mouse cortex and hippocampus revealed by single-cell RNA-seq](http://www.sciencemag.org/content/early/2015/02/18/science.aaa1934.abstract) [@zeisel2015]
 
 ```{r import packages}
 if(!"devtools" %in% row.names(installed.packages())){
@@ -58,36 +55,35 @@ if(!"EWCE" %in% row.names(installed.packages())){
 library(EWCE)
 ```
 
-# Introduction  
+# Introduction
 
-* Some new functions to EWCE aim to make data ingestion and conversion to CellTypeData objects (to be used as single-cell references) as easy as flexible as possible.  
+-   Some new functions to EWCE aim to make data ingestion and conversion to CellTypeData objects (to be used as single-cell references) as easy as flexible as possible.
 
-* `ingest_data()` automatically infers the object format and converts it into a `SingleCellExperiment` (SCE). You can supply either the dataset itself, or a path to its stored location.  
+-   `ingest_data()` automatically infers the object format and converts it into a `SingleCellExperiment` (SCE). You can supply either the dataset itself, or a path to its stored location.
 
-## Ingest *EWCE_list*  
+## Ingest *EWCE_list*
 
-EWCE comes with several example datasets, which are lists of "exp" (expression matrix) and "annot" (cell data). 
+EWCE comes with several example datasets, which are lists of "exp" (expression matrix) and "annot" (cell data).
 
 ```{r Ingest EWCE_list}
 data(cortex_mrna)
 sce <- ingest_data(obj = cortex_mrna)
 ```
 
-* Importantly, `ingest_data()` can save the expression matrix as a [`DelayedArray`](http://bioconductor.org/packages/release/bioc/html/DelayedArray.html). 
+-   Importantly, `ingest_data()` can save the expression matrix as a [`DelayedArray`](http://bioconductor.org/packages/release/bioc/html/DelayedArray.html).
 
-* This means you can perform operations on your data without loading it all into memory at once, which becomes very useful with larger datasets.  
+-   This means you can perform operations on your data without loading it all into memory at once, which becomes very useful with larger datasets.
 
-* See [here for a great introduction](https://petehaitch.github.io/BioC2020_DelayedArray_workshop/articles/Effectively_using_the_DelayedArray_framework_for_users.html) to the different kinds of scalable matrix operations you can perform on `DelayedArrays.`  
+-   See [here for a great introduction](https://petehaitch.github.io/BioC2020_DelayedArray_workshop/articles/Effectively_using_the_DelayedArray_framework_for_users.html) to the different kinds of scalable matrix operations you can perform on `DelayedArrays.`
 
 ```{r Ingest EWCE_list: DelayedArray}
 sce <- ingest_data(obj = cortex_mrna, 
                    sce_save_dir = here::here("~/Desktop/sce_examples"))
 ```
 
+## Ingest *EWCE_list*: from storage
 
-## Ingest *EWCE_list*: from storage  
-
-* All single-cell datasets can alternatively be convert by simply supplying the path to where the file is stored. `ingest_data()` will automatically figure out how to import it and then continue with the conversion to SCE format. 
+-   All single-cell datasets can alternatively be convert by simply supplying the path to where the file is stored. `ingest_data()` will automatically figure out how to import it and then continue with the conversion to SCE format.
 
 ```{r Ingest EWCE_list: from storage}
 # Can save the object as .RDS or .RDATA 
@@ -97,18 +93,18 @@ saveRDS(cortex_mrna, stored_data)
 sce <- ingest_data(obj = stored_data)
 ```
 
-## Ingest *Seurat*  
+## Ingest *Seurat*
 
-Here we ingest a [Seurat object](https://rdrr.io/cran/Seurat/man/pbmc_small.html) containing scRNA-seq data from peripheral blood mononuclear cells (PBMCs).  
+Here we ingest a [Seurat object](https://rdrr.io/cran/Seurat/man/pbmc_small.html) containing scRNA-seq data from peripheral blood mononuclear cells (PBMCs).
 
-```{r Ingest Seurat} 
+```{r Ingest Seurat}
 # Import and update a Seurat object
 data(pbmc_small) 
 
 sce <- ingest_data(obj = pbmc_small)
 ```
 
-## Ingest *loom*  
+## Ingest *loom*
 
 ```{r Ingest loom}
 # loom_file <- here::here("~/Desktop/cortex_mrna.loom")
@@ -121,7 +117,7 @@ loom_file <- system.file("extdata/cortex_mrna.loom", package = "EWCE")
 sce <- ingest_data(obj = loom_file)
 ```
 
-## List all formats  
+## List all formats
 
 To list all formats that `ingest_data()` can take, simply pass `NULL`.
 
@@ -129,10 +125,12 @@ To list all formats that `ingest_data()` can take, simply pass `NULL`.
 ingest_data(NULL)
 ```
 
-# Create EWCE CellTypeData 
+# Create EWCE CellTypeData
 
-* So why does this matter? Well, it means that you can now create new scRNA-seq reference dataset very easily, as EWCE now recognizes SCE format.  
-* It also means that steps like 
+-   So why does this matter? Well, it means that you can now create new scRNA-seq reference dataset very easily, as EWCE now recognizes SCE format.\
+-   It also means that steps like
+
+## Ingest data
 
 ```{r Ingest data}
 data(cortex_mrna)
@@ -141,27 +139,29 @@ sce <- ingest_data(obj = cortex_mrna,
                    replace_HDF5 = T)
 ```
 
-## drop.uninformative.genes  
+## drop.uninformative.genes
 
-### Limma  
+### Limma
 
-* As in prior versions of EWCE, the default method of filtering genes is to:
-  1. Drop genes with zero mean expression.  
-  2. Drop genes that are not significantly differentially expressed (you can adjust the filtering threshold via `adj_pval_thresh=<min_p-value>`).  
-  
+-   As in prior versions of EWCE, the default method of filtering genes is to:
+
+    1.  Drop genes with zero mean expression.\
+    2.  Drop genes that are not significantly differentially expressed (you can adjust the filtering threshold via `adj_pval_thresh=<min_p-value>`).
+
 ```{r Limma}
 sce.limma <- EWCE::drop.uninformative.genes(sce, 
                                             level2annot="level2class",
                                             DGE_method="limma",
                                             return_sce=T)
 ```
-### Drop non-orthologues  
 
-* In addition to filtering by these method, you can also remove genes based one which one have human orthologues (if your SCE data comes from non-humans).  
+### Drop non-orthologues
 
-* Specify the species your data comes from with `input_species=<species_name>`.  
+-   In addition to filtering by these method, you can also remove genes based one which one have human orthologues (if your SCE data comes from non-humans).
 
-* It then goes on to filter via DGE with limma, as before. You can also set `DGE_method=NULL` to *only* filter by non-expressio and non-orthologues.  
+-   Specify the species your data comes from with `input_species=<species_name>`.
+
+-   It then goes on to filter via DGE with limma, as before. You can also set `DGE_method=NULL` to *only* filter by non-expressio and non-orthologues.
 
 ```{r Drop non-orthologues}
 sce.orths_limma <- EWCE::drop.uninformative.genes(sce, 
@@ -172,15 +172,16 @@ sce.orths_limma <- EWCE::drop.uninformative.genes(sce,
                                                   drop_nonhuman_genes = T, 
                                                   input_species = "mouse")
 ```
-### DESeq2  
 
-* Alternatively, you can use `DESeq2` to perform the DGE step. 
+### DESeq2
 
-* `DESeq2` tends to be more computationally intensive than `limma`, so we provide an additional pre-filtering step by rapidly calculating the variance of mean gene expression across cell-types. To enable this, set `min_variance_decile` to a value between 0-1.  
+-   Alternatively, you can use `DESeq2` to perform the DGE step.
 
-* `DESeq2` supports parallelization, which is automatically enabled here.  
+-   `DESeq2` tends to be more computationally intensive than `limma`, so we provide an additional pre-filtering step by rapidly calculating the variance of mean gene expression across cell-types. To enable this, set `min_variance_decile` to a value between 0-1.
 
-```{r DESeq2} 
+-   `DESeq2` supports parallelization, which is automatically enabled here.
+
+```{r DESeq2}
 sce.deseq <- EWCE::drop.uninformative.genes(sce, 
                                             level2annot="level2class",
                                             DGE_method="DESeq2",  
@@ -191,23 +192,28 @@ sce.deseq <- EWCE::drop.uninformative.genes(sce,
                                             min_variance_decile=.9)
 ```
 
-### glmGamPoi  
+### glmGamPoi
 
-* The DGE method [`glmGamPoi`](https://github.com/const-ae/glmGamPoi) takes  advantage of the `DelayedArray` matrix class the SCE is stored as, so that each time it only reads in the subset of data necessary to fit the Gamma-Poisson Generalized Linear Model.  
+-   The DGE method [`glmGamPoi`](https://github.com/const-ae/glmGamPoi) takes advantage of the `DelayedArray` matrix class the SCE is stored as, so that each time it only reads in the subset of data necessary to fit the Gamma-Poisson Generalized Linear Model.
 
-* `glmGamPoi` supports parallelization, by automatically using ~90% of all available cores.  
+-   `glmGamPoi` supports parallelization, by automatically using \~90% of all available cores.
 
-* **NOTE**: While `glmGamPoi` is scalable, it can take a long time to run. So if you have a reasonably small dataset that you can fit into all at once memory, it's best to instead use [`limma`](https://bioconductor.org/packages/release/bioc/html/limma.html). For very large datasets that can't fit into memory, `glmGamPoi` is the way to go.   
+-   **NOTE**: While `glmGamPoi` is scalable, it can take a long time to run. So if you have a reasonably small dataset that you can fit into all at once memory, it's best to instead use [`limma`](https://bioconductor.org/packages/release/bioc/html/limma.html). For very large datasets that can't fit into memory, `glmGamPoi` is the way to go.
 
-```{r glmGamPoi}
-sce.glmgp <- EWCE::drop.uninformative.genes(sce, 
+```{r glmGamPoi, eval=F}
+data(cortex_mrna)
+# sce <- ingest_data(obj = cortex_mrna)
+
+sce.glmgp <- EWCE::drop.uninformative.genes(cortex_mrna, 
                                             level2annot="level2class",
                                             DGE_method="glmGamPoi",  
                                             drop_nonhuman_genes=T,
                                             input_species="mouse",
-                                            return_sce=T, 
-                                            min_variance_decile=.9)
+                                            return_sce=T,  
+                                            min_variance_decile=.9,
+                                             
+                                            sce_save_dir=here::here("~/Desktop/sce_examples"),
+                                            on_disk=F)
 ```
 
 # References
-

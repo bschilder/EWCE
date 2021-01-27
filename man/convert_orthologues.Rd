@@ -8,6 +8,7 @@ convert_orthologues(
   gene_df,
   gene_col = "Gene",
   input_species = "mouse",
+  output_species = "human",
   drop_nonhuman_genes = F,
   one_to_one_only = T,
   genes_as_rownames = F,

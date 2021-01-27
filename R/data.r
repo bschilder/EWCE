@@ -196,7 +196,6 @@
 #'
 #' @references
 #' \href{Seurat::pbmc_small}{https://rdrr.io/cran/Seurat/man/pbmc_small.html}.
-#' @inherit Seurat::pbmc_small
 #' @source
 #' library(Seurat)
 #' data(pbmc_small)

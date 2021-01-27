@@ -10,22 +10,45 @@
 drop.uninformative.genes(
   exp,
   level2annot,
-  as_DelayedArray = F,
-  colData = NULL,
-  rowData = NULL,
-  sce_save_dir = NULL,
-  pseudobulk_by = NULL,
+  DGE_method = "limma",
+  min_variance_decile = NULL,
   adj_pval_thresh = 1e-05,
-  verbose = T
+  drop_nonhuman_genes = F,
+  input_species = NULL,
+  sce_save_dir = NULL,
+  return_sce = F,
+  verbose = T,
+  ...
 )
 }
 \arguments{
 \item{exp}{Expression matrix with gene names as rownames.}
 
-\item{level2annot}{Array of cell types, with each sequentially corresponding a column in the expression matrix}
+\item{DGE_method}{Which method to use for the Differential Gene Expression (DGE) step.}
+
+\item{min_variance_decile}{If `min_variance_decile!=NULL`, calculates the variance of the mean gene expression  across `level2annot` (i.e. cell-types),
+and then removes any genes that are below `min_variance_decile` (on a 0-1 scale).}
+
+\item{adj_pval_thresh}{Minimum differential expression significance
+that a gene must demonstrate across `level2annot` (i.e. cell-types).}
+
+\item{drop_nonhuman_genes}{Whether to drop genes that don't have human orthologues.}
+
+\item{input_species}{The species that the `exp` dataset comes from
+(to be used during the non-orthologues filtering step).}
+
+\item{return_sce}{Whether to return the filtered results
+as an expression matrix or a \pkg{SingleCellExperiment}.}
+
+\item{verbose}{Whether to print messages (`T` or `F`).}
+
+\item{...}{Additional arguments to be passed to the selected DGE method.}
+
+\item{`level2annot}{Array of cell types, with each sequentially corresponding a column in the expression matrix}
 }
 \value{
-exp Expression matrix with gene names as rownames.
+exp Expression matrix with gene names as rownames,
+or a \pkg{SingleCellExperiment} if \code{return_sce=T}.
 }
 \description{
 \code{drop.uninformative.genes} drops genes from an SCT expression matrix if they do not significantly vary between any celltypes.

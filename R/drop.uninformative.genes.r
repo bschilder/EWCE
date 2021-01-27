@@ -44,15 +44,19 @@ drop.uninformative.genes <- function(exp,
     DGE_method <- if(is.null(DGE_method)) "" else DGE_method
     #### Convert to SCE format ####
     sce <- ingest_data(obj = exp)
+
     ### Remove non-expressed genes ####
     printer("+ Removing non-expressed genes...",v=verbose)
     exp <- SummarizedExperiment::assay(sce)
     summed <- DelayedArray::rowSums(exp)
     # Subset the sce object
     sce = sce[summed!=0,]
+    printer(paste(nrow(sce)-sum(summed!=0),"/",nrow(sce),
+                  "non-expressed genes dropped"), v=verbose)
 
     #### Remove non-orthologues ####
     if(drop_nonhuman_genes){
+        exp <- SummarizedExperiment::assay(sce)
         orths <- convert_orthologues(gene_df=exp,
                                      gene_col="rownames",
                                      input_species=input_species,
@@ -68,10 +72,10 @@ drop.uninformative.genes <- function(exp,
         # Use variance of mean gene expression across cell types
         # as a fast and simple way to select genes
         sce <- DelayedArray_filter_variance_quantiles(sce = sce,
-                                                           level2annot = level2annot,
-                                                           n_quantiles = 10,
-                                                           min_variance_decile = min_variance_decile,
-                                                           verbose = verbose)
+                                                       level2annot = level2annot,
+                                                       n_quantiles = 10,
+                                                       min_variance_decile = min_variance_decile,
+                                                       verbose = verbose)
     }
 
     # Make sure the matrix hasn't been converted to characters
@@ -117,9 +121,7 @@ drop.uninformative.genes <- function(exp,
         messager("DGE:: glmGamPoi...",v=verbose)
         sce_de <- run_glmGamPoi_DE(sce,
                                    level2annot=level2annot,
-                                   pval_adjust_method="BH",
                                    adj_pval_thresh=adj_pval_thresh,
-                                   on_disk=T,
                                    return_as_SCE=T,
                                    sce_save_dir=sce_save_dir,
                                    verbose=verbose,
@@ -248,6 +250,7 @@ run_DESeq2 <- function(sce,
     dds <- DESeq2::DESeq(dds,
                          # Best for scRNAseq data.
                          test="LRT",
+                         reduced = ~1,
                          # DESeq2 v1.31.10 (not yet released on BioC)
                          # now has glmGamPoi directly integrated directly!
                          ## https://github.com/mikelove/DESeq2/issues/29

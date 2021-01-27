@@ -25,6 +25,7 @@ run_glmGamPoi_DE <- function(sce,
                              sce_save_dir=NULL,
                              verbose=T,
                              ...){
+    core_allocation <- assign_cores(worker_cores=.90, verbose=F)
     # You must make sure the sce is
     # saved to disk in order to get its filepath.
     h5_path <- sce_filepath(sce)
@@ -32,12 +33,23 @@ run_glmGamPoi_DE <- function(sce,
         if(is.null(sce_save_dir)){
             stop("`sce_save_dir` required to save SCE object to disk.")
         }else {
-            sce <- ingest_data(sce,
-                               sce_save_dir = sce_save_dir,
-                               replace_HDF5 = T)
+            sce <- HDF5Array::saveHDF5SummarizedExperiment(sce,
+                                                           dir=sce_save_dir,
+                                                           replace = T)
             h5_path <- sce_filepath(sce)
         }
     }
+
+
+    try({
+        # Make sure on_disk version matches the sce pointer
+        sce <- HDF5Array::saveHDF5SummarizedExperiment(sce,
+                                                       dir=sce_save_dir,
+                                                       replace = T)
+    })
+    try({
+        sce <- HDF5Array::quickResaveHDF5SummarizedExperiment(sce, verbose = verbose)
+    })
 
     level2_options <- as.factor(sce[[level2annot]])
     mod_matrix  <- model.matrix(~level2_options)
@@ -45,8 +57,8 @@ run_glmGamPoi_DE <- function(sce,
                              design = mod_matrix,
                              # on_disk=F when testing on subsets of SCE
                              on_disk = on_disk,
-                             # Offset necessary for sparse scRNAseq data
-                             offset = 1,
+                             # Offset necessary for sparse scRNAseq data?
+                             # offset = 1,
                              verbose = verbose)
     # Save fitted model as intermediate
     sce_dir <- dirname(h5_path)
@@ -80,10 +92,9 @@ run_glmGamPoi_DE <- function(sce,
     # Only return deferentially expressed genes
     sce_de <- subset(sce_de, adj_pval<adj_pval_thresh)
     genes_dropped <- nrow(sce)-nrow(sce_de)
-    message("+ ",genes_dropped," / ",nrow(sce),
-            " (",round(genes_dropped/nrow(sce)*100, 1),"%)",
-            " genes dropped due to lack of differential expression ",
-            "between level2 annotations.")
+    messager(genes_dropped,"/",nrow(sce),
+            "(",round(genes_dropped/nrow(sce)*100, 1),"%)",
+            "genes dropped @ DGE adj_pval_thresh <",adj_pval_thresh, v=verbose)
     if(return_as_SCE){
         return(sce_de)
     }else {
