@@ -40,9 +40,7 @@ Remotes:
 Suggests:
     knitr,
     BiocStyle,
-    rmarkdown,
-    Seurat, 
-    anndata,
+    rmarkdown, 
     reticulate
 biocViews:
     GeneExpression,
