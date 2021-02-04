@@ -31,7 +31,8 @@ Imports:
     future,
     scales,
     RNOmni,
-    sctransform
+    sctransform,
+    homologene
 Remotes:
     github::ChristophH/sctransform@*release,
     github::mojaveazure/seurat-disk,
@@ -41,7 +42,8 @@ Suggests:
     knitr,
     BiocStyle,
     rmarkdown, 
-    reticulate
+    reticulate,
+    hdf5r
 biocViews:
     GeneExpression,
     Transcription,
