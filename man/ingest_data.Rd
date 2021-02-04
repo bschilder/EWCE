@@ -31,6 +31,7 @@ It then uses the appropriate functions to import that data and convert it to a
 \pkg{SingleCellExperiment}, which is recognized by other \pkg{EWCE} functions.
 }
 \examples{
+\dontrun{
 library(EWCE)
 data("cortex_mrna")
 library(Seurat)
@@ -83,5 +84,5 @@ loom <- loomR::create(data=adata, filename = "~/Desktop/pbmc_small.loom", overwr
 sce <- ingest_data(obj=loom)
 ## From disk
 sce <- ingest_data(obj="~/Desktop/pbmc_small.loom")
-
+}
 }

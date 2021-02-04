@@ -8,6 +8,7 @@
 #' \pkg{SingleCellExperiment}, which is recognized by other \pkg{EWCE} functions.
 #'
 #' @examples
+#' \dontrun{
 #' library(EWCE)
 #' data("cortex_mrna")
 #' library(Seurat)
@@ -60,7 +61,7 @@
 #' sce <- ingest_data(obj=loom)
 #' ## From disk
 #' sce <- ingest_data(obj="~/Desktop/pbmc_small.loom")
-#'
+#' }
 #' @import dplyr
 #' @source
 #' \href{https://github.com/cellgeni/sceasy}{sceasy}

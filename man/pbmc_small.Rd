@@ -17,7 +17,7 @@ usethis::use_data(pbmc_small, internal = F, overwrite = T)
 pbmc_small
 }
 \description{
-A subsetted version of 10X Genomics' 3k PBMC dataset
+A small example version of the PBMC dataset (Seurat format)
 }
 \references{
 \href{Seurat::pbmc_small}{https://rdrr.io/cran/Seurat/man/pbmc_small.html}.
