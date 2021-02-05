@@ -136,7 +136,7 @@ ingest_data(NULL)
 data(cortex_mrna)
 sce <- ingest_data(obj = cortex_mrna, 
                    sce_save_dir = here::here("~/Desktop/sce_examples"), 
-                   replace_HDF5 = T)
+                   overwrite = T)
 ```
 
 ## drop.uninformative.genes

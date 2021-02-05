@@ -78,7 +78,7 @@ ingest_data <- function(obj,
                         custom_reader=NULL,
                         sce_save_dir=NULL,
                         quicksave_HDF5=T,
-                        replace_HDF5=F,
+                        overwrite=F,
                         verbose=T,
                         ...){
     # Separate the reading/SCE conversion process
@@ -87,6 +87,8 @@ ingest_data <- function(obj,
     object <- read_scRNAseq_data(obj=obj,
                                  filetype=filetype,
                                  custom_reader=custom_reader,
+                                 sce_save_dir=sce_save_dir,
+                                 overwrite=overwrite,
                                  verbose=verbose,
                                  ...)
     sce <- convert_to_SCE(object = object,
@@ -94,7 +96,7 @@ ingest_data <- function(obj,
     sce <- save_SCE(sce=sce,
                     save_dir=sce_save_dir,
                     quicksave_HDF5=quicksave_HDF5,
-                    replace_HDF5=replace_HDF5,
+                    overwrite=overwrite,
                     verbose=verbose)
     return(sce)
 }
@@ -105,6 +107,8 @@ ingest_data <- function(obj,
 read_scRNAseq_data <- function(obj,
                                filetype="guess",
                                custom_reader=NULL,
+                               sce_save_dir=NULL,
+                               overwrite=F,
                                verbose=T,
                                ...){
     if(!is.null(custom_reader)){
@@ -155,11 +159,23 @@ read_scRNAseq_data <- function(obj,
         if((endsWith(tolower(obj), suffix=".h5ad")) | tolower(filetype)=="h5ad"){
             messager("+ AnnData format (.h5ad) detected. Importing as AnnData object...",v=verbose)
             #### anndata method
-            # object <- anndata::read_h5ad(filename = obj)
+            # Anndata adds another dependency, but at least it works unlike
+            object <- anndata::read_h5ad(filename = obj)
+
             #### sceasy method
             # object <- sceasy::convertFormat(obj, from="anndata", to="sce")
+
             #### Seurat method
-            object <- Seurat::ReadH5AD(obj, ...)
+            ## This is now deprecated, and for some reason doesn't offer back compatibility by calling to SeuratDisk...
+            # object <- Seurat::ReadH5AD(obj, ...)
+
+            ## SeuratDisk is currently broken, with no word from the developer...
+            ## https://github.com/mojaveazure/seurat-disk/issues/41
+            # object <- SeuratDisk::Convert(source = obj,
+            #                               dest = sce_save_dir,
+            #                               overwrite = overwrite,
+            #                               verbose = verbose,
+            #                               ...)
             return(object)
         }
         #### H5Seurat ####
@@ -185,12 +201,14 @@ read_scRNAseq_data <- function(obj,
             return(object)
         }
         #### HDF5Array SummarizedExperiment/SingleCellExperiment ####
-        if(dir.exists(obj) | tolower(filetype) %in% c("HDF5Array","SummarizedExperiment","SingleCellExperiment") ){
-             if(file.exists(file.path(obj,"assays.h5")) & file.exists(file.path(obj,"se.rds")) ){
-                 messager("+ HDF5Array format (.h5) detected. Importing as SingleCellExperiment object...",v=verbose)
-                 object <- HDF5Array::loadHDF5SummarizedExperiment(obj, ...)
-                 return(object)
-             }
+        if((endsWith(tolower(obj), suffix=c(".h5",".sce")))  | tolower(filetype) %in% c("HDF5Array","SummarizedExperiment","SingleCellExperiment") ){
+            if(dir.exists(obj)){
+                if(file.exists(file.path(obj,"assays.h5")) & file.exists(file.path(obj,"se.rds")) ){
+                    messager("+ HDF5Array format (.h5) detected. Importing as SingleCellExperiment object...",v=verbose)
+                    object <- HDF5Array::loadHDF5SummarizedExperiment(obj, ...)
+                    return(object)
+                }
+            }
         }
     } else {
         messager("+ Returning object directly...",v=verbose)
@@ -282,22 +300,22 @@ convert_to_SCE <- function(object,
 save_SCE <- function(sce,
                      save_dir,
                      quicksave_HDF5=T,
-                     replace_HDF5=F,
+                     overwrite=F,
                      verbose=T){
     if(!is.null(save_dir)){
-        if(quicksave_HDF5 & file.exists(file.path(save_dir,"assays.h5")) & (replace_HDF5==F)){
+        if(quicksave_HDF5 & file.exists(file.path(save_dir,"assays.h5")) & (overwrite==F)){
             messager("+ Updating existing HDF5...",v=verbose)
             sce <- HDF5Array::quickResaveHDF5SummarizedExperiment(x=sce,
                                                                   verbose=verbose)
         } else {
-            if( (!dir.exists(save_dir)) | (replace_HDF5) ){
+            if( (!dir.exists(save_dir)) | (overwrite) ){
                 messager("+ Writing new HDF5...",v=verbose)
                 # DON'T create the HDF5 dir itself (will return an error about overwriting)
                 dir.create(dirname(save_dir), showWarnings = F, recursive = T)
                 sce <- HDF5Array::saveHDF5SummarizedExperiment(x=sce,
                                                                dir=save_dir,
                                                                verbose=verbose,
-                                                               replace=replace_HDF5)
+                                                               replace=overwrite)
             } else {
                 messager("+ Returning existing SCE object.",v=verbose)
             }
