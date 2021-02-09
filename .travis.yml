@@ -23,7 +23,7 @@ before_install:
 - echo $TRAVIS_R_VERSION_STRING
 - wget https://cran.r-project.org/src/contrib/Archive/XML/XML_3.99-0.3.tar.gz
 - R CMD INSTALL XML_3.99-0.3.tar.gz
-- sudo apt-get -y install libhdf5-dev
+- sudo apt-get -y install libhdf5-serial-dev
 - rm XML_3.99-0.3.tar.gz
 
 addons:
