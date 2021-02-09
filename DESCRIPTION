@@ -36,7 +36,8 @@ Imports:
 Remotes:
     github::ChristophH/sctransform@*release,
     github::mojaveazure/seurat-disk,
-    github::cellgeni/sceasy
+    github::cellgeni/sceasy,
+    github::const-ae/glmGamPoi
 Suggests:
     knitr,
     BiocStyle,
@@ -57,7 +58,6 @@ biocViews:
     Proteomics, 
     Visualization,
     FunctionalGenomics,
-    SingleCellExperiment,
-    glmGamPoi
+    SingleCellExperiment 
 RoxygenNote: 7.1.1
 Encoding: UTF-8
