@@ -188,7 +188,8 @@ read_scRNAseq_data <- function(obj,
         if((endsWith(tolower(obj), suffix=".loom")) | tolower(filetype)=="loom"){
             messager("+ Loom format (.loom) detected. Importing as SingleCellLoomExperiment object...",v=verbose)
             #### anndata method
-            # anndata::read_loom(filename=obj, validate=F, ...) ### Difficulties identifying right loompy location
+            ## anndata::read_loom has difficulties identifying right loompy location.
+            # anndata::read_loom(filename=obj, validate=F, ...)
 
             #### loomR method
             ## skip.validate must =F, or else you won't be able to extract the matrix
