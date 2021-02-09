@@ -30,7 +30,7 @@ addons:
   homebrew:
     packages:
     - hdf5
-    update: true
+    update: false
 
 # This is intended to run Docker only when the build on linux/release is completed succesfully on the master branch
 deploy:
