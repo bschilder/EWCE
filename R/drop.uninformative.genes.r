@@ -47,8 +47,7 @@ drop.uninformative.genes <- function(exp,
 
     ### Remove non-expressed genes ####
     printer("+ Removing non-expressed genes...",v=verbose)
-    exp <- SummarizedExperiment::assay(sce)
-    summed <- DelayedArray::rowSums(exp)
+    summed <- DelayedArray::rowSums(SummarizedExperiment::assay(sce))
     # Subset the sce object
     sce = sce[summed!=0,]
     printer(paste(nrow(sce)-sum(summed!=0),"/",nrow(sce),
@@ -56,15 +55,21 @@ drop.uninformative.genes <- function(exp,
 
     #### Remove non-orthologues ####
     if(drop_nonhuman_genes){
-        exp <- SummarizedExperiment::assay(sce)
-        orths <- convert_orthologues(gene_df=exp,
-                                     gene_col="rownames",
-                                     input_species=input_species,
-                                     drop_nonhuman_genes=T,
-                                     one_to_one_only=T,
-                                     genes_as_rownames=T,
-                                     verbose=verbose)
-        sce <- sce[orths$Gene_orig,]
+        rowDat <- SummarizedExperiment::rowData(sce)
+        if(all(c("Gene","Gene_orig") %in% colnames(rowDat)) ){
+            printer("+ Orthologues previously converted.",v=verbose)
+            sce <- sce[!is.na(rowDat$Gene),]
+        }else {
+            orths <- convert_orthologues(gene_df=rowDat,
+                                         gene_col="rownames",
+                                         input_species=input_species,
+                                         drop_nonhuman_genes=T,
+                                         one_to_one_only=T,
+                                         genes_as_rownames=T,
+                                         verbose=verbose)
+            sce <- sce[orths$Gene_orig,]
+        }
+
     }
 
     ### Simple variance ####
@@ -79,11 +84,10 @@ drop.uninformative.genes <- function(exp,
     }
 
     # Make sure the matrix hasn't been converted to characters
-    if(class(exp[1,1])=="character"){
-        exp <- SummarizedExperiment::assay(sce)
-        exp = as.matrix(exp)
-        storage.mode(exp) <- "numeric"
-        SummarizedExperiment::assay(sce) <- exp
+    if(class(SummarizedExperiment::assay(sce)[1,1])=="character"){
+        # exp <- SummarizedExperiment::assay(sce)
+        # exp = as.matrix(exp)
+        storage.mode(SummarizedExperiment::assay(sce)) <- "numeric"
     }
 
     # Run DGE
@@ -137,7 +141,7 @@ drop.uninformative.genes <- function(exp,
     if(return_sce){
         return(sce)
     }else{
-        return(SummarizedExperiment::assay(exp))
+        return(SummarizedExperiment::assay(sce))
     }
 }
 
