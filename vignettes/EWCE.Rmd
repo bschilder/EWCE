@@ -1,6 +1,6 @@
 ---
 title: "Expression Weighted Celltype Enrichment with *EWCE*"
-author: "Nathan Skene & Brian Schilder"
+author: "Nathan Skene & Brian Schilder"  
 date: "`r Sys.Date()`"
 output: 
   rmarkdown::html_document: 
@@ -566,10 +566,6 @@ print(res_rbfox_id)
 
 ```
 
-
-# References
-
-
 # Session Info  
 
 <details> 
@@ -578,5 +574,6 @@ print(res_rbfox_id)
 utils::sessionInfo()
 ```
 
-</details>
+</details>  
 
+# References

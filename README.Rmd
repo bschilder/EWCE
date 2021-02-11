@@ -1,6 +1,6 @@
 ---
 title: "Expression Weighted Celltype Enrichment with *EWCE*"
-author: "Nathan Skene & Brian Schilder"
+author: "Nathan Skene & Brian Schilder"  
 date: "`r Sys.Date()`"
 bibliography: inst/extdata/EWCE.bib
 csl: inst/extdata/nature.csl
@@ -92,9 +92,6 @@ If you use the cortex/hippocampus single cell data associated with this package 
 [Zeisel, et al. Cell types in the mouse cortex and hippocampus revealed by single-cell RNA-seq.
 Science, 2015.](http://www.sciencemag.org/content/early/2015/02/18/science.aaa1934.abstract)
 
-
-# References
-
 # Session Info  
 
 <details> 
@@ -104,4 +101,6 @@ utils::sessionInfo()
 ```
 
 
-</details>
+</details>  
+
+# References

@@ -41,8 +41,7 @@ Suggests:
     knitr,
     BiocStyle,
     rmarkdown, 
-    reticulate,
-    hdf5r
+    reticulate 
 biocViews:
     GeneExpression,
     Transcription,
