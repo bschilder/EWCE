@@ -18,7 +18,9 @@ create_DT <- function (DF, caption = "", scrollY = 400)
 
 
 
-
+message_parallel <- function(...){
+    system(sprintf('echo "%s"', paste0(..., collapse="")))
+}
 
 messager <- function(..., v=T){if(v){message(paste(...))}}
 

@@ -165,6 +165,15 @@ convert_orthologues <- function(gene_df,
                                 verbose=T){
     gene_df <- data.frame(gene_df)
     messager("Converting genes: ",input_species," ===> human", v=verbose)
+    if(all(c("Gene","Gene_orig") %in% colnames(gene_df))){
+        printer("+ Orthologues previously converted.",v=verbose) 
+        if(drop_nonhuman_genes){
+            printer("+ Dropping genes with no human orthologues...",v=verbose)
+            gene_df <- gene_df[!is.na(gene_df$Gene),]
+            gene_df <- gene_df[gene_df$Gene!="NA_character_",] 
+        } 
+        return(gene_df)
+    }
 
     if(gene_col %in% c("rownames","row.names")){
         printer("+ Converting rownames to Gene col...",v=verbose)
@@ -191,6 +200,7 @@ convert_orthologues <- function(gene_df,
     if(drop_nonhuman_genes){
         printer("+ Dropping genes with no human orthologues...",v=verbose)
         gene_df <- gene_df[!is.na(gene_df$Gene),]
+        gene_df <- gene_df[gene_df$Gene!="NA_character_",] 
     }
 
     if(one_to_one_only){

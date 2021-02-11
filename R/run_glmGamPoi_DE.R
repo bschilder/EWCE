@@ -79,8 +79,8 @@ run_glmGamPoi_DE <- function(sce,
                                  verbose = verbose)
     # Add DGE results back into SCE object
     sce_de <- SingleCellExperiment::SingleCellExperiment(
-        assays      = list(raw = assay(sce)),
-        colData     = sce@colData,
+        assays      = list(raw = SingleCellExperiment::assay(sce)),
+        colData     = SingleCellExperiment::colData(sce),
         rowData     = de_res
     )
 

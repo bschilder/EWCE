@@ -48,12 +48,15 @@
 generate.celltype.data <- function(exp,
                                    annotLevels,
                                    groupName,
+                                   numberOfBins=40,
                                    no_cores=NULL,
                                    add_names=F,
                                    savePath="~/",
                                    file_prefix="CellTypeData",
                                    force_new_file=T,
                                    return_ctd=F,
+                                   drop_nonhuman_genes=F,
+                                   input_species="mouse",
                                    verbose=T){
     #### Check group name ####
     if(is.null(groupName)){stop("ERROR: groupName must be set. groupName is used to label the files created by this function.")}
@@ -67,47 +70,79 @@ generate.celltype.data <- function(exp,
         return(fNames)
     }
 
+    #### Prepare cores ####
+    worker_cores <- if(is.null(no_cores)) .90 else no_cores
+    core_allocation <- assign_cores(worker_cores = worker_cores)
+    no_cores <- core_allocation$worker_cores
+
     # Calculate summary stats from matrix
 
     #### DelayedArray method ####
-    if(class(exp)[1] %in% c("SingleCellExperiment")){
+    if(class(exp)[1] %in% c("SingleCellExperiment","SingleCellLoomExperiment")){
         messager("Processing as DelayedArray...",v=verbose)
+        sce <- exp
+
+        if(drop_nonhuman_genes){
+            sce <- check_sce_rownames(sce, rownames_var = "Gene")
+            rowDat <- SummarizedExperiment::rowData(sce)
+            orths <- convert_orthologues(gene_df=rowDat,
+                                         gene_col="rownames",
+                                         input_species=input_species,
+                                         drop_nonhuman_genes=T,
+                                         one_to_one_only=T,
+                                         genes_as_rownames=T,
+                                         verbose=verbose)
+            # Not always sure about how the sce has been named (original species gene names or human orthologues)
+            sce <- tryCatch({sce[orths$Gene_orig,]},
+                            error=function(e){ sce[orths$Gene,]
+                            })
+        }
+        #### Prepare annotation levels ####
         if(length(annotLevels[[1]])>1){
             level_names <- names(annotLevels)
         }else {
             level_names <- annotLevels
         }
-        if(any(!level_names %in% colnames(exp@colData))){
+        if(any(!level_names %in% colnames(SummarizedExperiment::colData(sce))) ){
             stop("+ When exp is of class 'SingleCellExperiment'",
                  " all names(annotLevels) must be in the column names of exp@colData.")
         }
 
-        worker_cores <- if(is.null(no_cores)) .90 else no_cores
-        core_allocation <- assign_cores(worker_cores = worker_cores)
-
-        ctd <- lapply(level_names,function(lvl, sce=exp){
+        # IMPORTANT!: Do NOT parallelize this step. It will interfere with DelayedArray functions.
+        ctd <- lapply(level_names,function(lvl, .sce=sce){
             messager("+ Processsing level = ",lvl,v=verbose)
-            grouped_means <- grouped_col_means(sce=exp,
-                                               group_var=lvl,
-                                               verbose=F)
-            grouped_specificity <- grouped_means / rowSums(grouped_means)
+            grouped_means <- DelayedArray_grouped_stats(sce = .sce,
+                                                        grouping_var = lvl,
+                                                        stat = "mean",
+                                                        return_sce = F)
+            grouped_specificity <- grouped_means / DelayedArray::rowSums(grouped_means)
+            # Convert to sparse DelayedMatrices
+            grouped_means <- DelayedArray::DelayedArray(as(grouped_means, "sparseMatrix"))
+            grouped_specificity <- DelayedArray::DelayedArray(as(grouped_specificity, "sparseMatrix"))
             return(list(mean_exp=grouped_means,
                         specificity=grouped_specificity))
         })
         if(add_names) names(ctd) <- level_names
+        # Convert the DelayedMatrices as sparseMatrices
+        # ctd_sparse <- ctd
+        # for(lvl in names(ctd_sparse)){
+        #     printer(lvl)
+        #     ctd_lvl <- ctd_sparse[[lvl]]
+        #     for(metric in names(ctd_lvl)){
+        #         printer("+",metric)
+        #         ctd_lvl[[metric]] <- DelayedArray::DelayedArray(as(ctd_lvl[[metric]], "sparseMatrix"))
+        #     }
+        #     ctd_sparse[[lvl]] <- ctd_lvl
+        # }
+        # saveRDS(ctd_sparse,"../model_celltype_conservation/processed_data/EWCE/LaManno2020/ctd_LaManno2020_4levels_sparseDA.RDS")
+
+
         # ***** DONE ***** #
     } else {
         #### Original method ####
         messager("Processing in-memory...",v=verbose)
 
         if(sum(is.na(exp))>0){stop("NA values detected in expresson matrix. All NA values should be removed before calling EWCE.")}
-
-        # Calculate the number of cores
-        no_cores <- if(is.null(no_cores)) 1 else no_cores
-
-        #cl <- parallel::makeCluster(no_cores)
-        #print(sprintf("Using %s cores",no_cores))
-
         # First, check the number of annotations equals the number of columns in the expression data
         out <- lapply(annotLevels,test <- function(x,exp){if(length(x)!=dim(exp)[2]){stop("Error: length of all annotation levels must equal the number of columns in exp matrix")}},exp)
 
@@ -116,19 +151,22 @@ generate.celltype.data <- function(exp,
         for(i in 1:length(annotLevels)){ctd[[length(ctd)+1]] = list(annot=annotLevels[[i]])}
 
         # Convert characters to numbers
-        if(!class(exp)[1] %in% c("dgCMatrix")){
-            exp<-suppressWarnings(apply(exp,2,function(x) {storage.mode(x) <- 'double'; x}))
+        matrix_classes <- c("data.table","data.frame","tbl_df","tbl","matrix","Matrix","array","DelayedArray","DelayedMatrix",names(getClass("Matrix")@subclasses)) # more than 40 ..
+        if(!class(exp)[1] %in% matrix_classes){
+            printer("Converting exp to matrix (double)",v=verbose)
+            exp <- suppressWarnings(apply(exp,2,function(x) {storage.mode(x) <- 'double'; x}))
         }
 
         # Make exp into a sparse matrix
         ## Matrix() will make data sparse automatically if >50% of the data is 0s.
         ## But we set sparse=T here just to be explicit.
-        exp = Matrix::Matrix(exp, sparse = T)
+        printer("Converting exp to sparse DelayedMatrix",v=verbose)
+        exp <- DelayedArray::DelayedArray(as(exp, "sparseMatrix"))
 
         calculate.meanexp.for.level <- function(ctd_oneLevel,
                                                 expMatrix,
                                                 verbose=T){
-            if(dim(expMatrix)[2]==length(unique(ctd_oneLevel$annot))){
+            if( dim(expMatrix)[2]==length(unique(ctd_oneLevel$annot)) ){
                 print(dim(expMatrix)[2])
                 print(length(ctd_oneLevel$annot))
                 if(sum(!colnames(expMatrix)==ctd_oneLevel$annot)!=0){
@@ -151,14 +189,16 @@ generate.celltype.data <- function(exp,
             }
             return(ctd_oneLevel)
         }
+
         calculate.specificity.for.level <- function(ctd_oneLevel){
             normalised_meanExp = t(t(ctd_oneLevel$mean_exp)*(1/colSums(ctd_oneLevel$mean_exp)))
             ctd_oneLevel$specificity = normalised_meanExp/(apply(normalised_meanExp,1,sum)+0.000000000001)
             return(ctd_oneLevel)
         }
-        ctd2 = mclapply(ctd,calculate.meanexp.for.level,exp,verbose,mc.cores=no_cores)
-
-        ctd3 = mclapply(ctd2,calculate.specificity.for.level,verbose,mc.cores=no_cores)
+        printer("+ Calculating normalized mean expression.",v=verbose)
+        ctd2 = parallel::mclapply(ctd,calculate.meanexp.for.level,exp,verbose,mc.cores=no_cores)
+        printer("+ Calculating normalized specificity.",v=verbose)
+        ctd3 = parallel::mclapply(ctd2,calculate.specificity.for.level,mc.cores=no_cores)
         ctd=ctd3
         #stopCluster(cl)
         # ***** DONE ***** #
@@ -169,8 +209,8 @@ generate.celltype.data <- function(exp,
     rNorm <- function(ctdIN){   bbb = t(apply(ctdIN$specificity,1,RNOmni::rankNorm));  return(bbb)    }
 
     # ADD DENDROGRAM DATA TO CTD
-    ctd = lapply(ctd,bin.specificity.into.quantiles,numberOfBins=40)
-    ctd = lapply(ctd,prep.dendro)
+    ctd = lapply(ctd, bin.specificity.into.quantiles, numberOfBins=numberOfBins)
+    ctd = lapply(ctd, prep.dendro)
 
     #### Save results ####
     messager("+ Saving results ==> ",fNames, v=verbose)

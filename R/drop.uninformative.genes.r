@@ -56,23 +56,27 @@ drop.uninformative.genes <- function(exp,
     #### Remove non-orthologues ####
     if(drop_nonhuman_genes){
         rowDat <- SummarizedExperiment::rowData(sce)
-        if(all(c("Gene","Gene_orig") %in% colnames(rowDat)) ){
-            printer("+ Orthologues previously converted.",v=verbose)
-            sce <- sce[!is.na(rowDat$Gene),]
-        }else {
-            orths <- convert_orthologues(gene_df=rowDat,
-                                         gene_col="rownames",
-                                         input_species=input_species,
-                                         drop_nonhuman_genes=T,
-                                         one_to_one_only=T,
-                                         genes_as_rownames=T,
-                                         verbose=verbose)
-            sce <- sce[orths$Gene_orig,]
-        }
-
+        orths <- convert_orthologues(gene_df=rowDat,
+                                     gene_col="rownames",
+                                     input_species=input_species,
+                                     drop_nonhuman_genes=T,
+                                     one_to_one_only=T,
+                                     genes_as_rownames=T,
+                                     verbose=verbose)
+            # Not always sure about how the sce has been named (original species gene names or human orthologues)
+           sce <- tryCatch({sce[orths$Gene_orig,]},
+                     error=function(e){ sce[orths$Gene,]
+                     })
     }
 
-    ### Simple variance ####
+    # #### Normalize ####
+    # # Normalize the data before filtering by variance to get a better selection of % genes to remove
+    # if(!is.null(normalize_method)){
+    #     MAST::zlm( ~ 1)
+    # }
+
+
+    #### Simple variance ####
     if(!is.null(min_variance_decile)){
         # Use variance of mean gene expression across cell types
         # as a fast and simple way to select genes
@@ -127,9 +131,9 @@ drop.uninformative.genes <- function(exp,
                                    level2annot=level2annot,
                                    adj_pval_thresh=adj_pval_thresh,
                                    return_as_SCE=T,
-                                   sce_save_dir=sce_save_dir,
-                                   verbose=verbose,
-                                   ...)
+                                   # sce_save_dir=sce_save_dir,
+                                   verbose=verbose)
+                                   # ...)
         printer(paste(nrow(sce)-nrow(sce_de),"/",nrow(sce),
                       "genes dropped @ DGE adj_pval_thresh <",adj_pval_thresh), v=verbose)
         sce <- sce_de
@@ -179,30 +183,41 @@ DelayedArray_filter_variance_quantiles <- function(sce,
 DelayedArray_grouped_stats <- function(sce,
                                        grouping_var,
                                        return_sce=T,
-                                       stat="mean"){
-    exp <- SummarizedExperiment::assay(sce)#DelayedArray::t.Array()
+                                       stat="mean",
+                                       rownames_var="Gene"){
     cdata <- SummarizedExperiment::colData(sce)
-    if(!grouping_var%in%colnames(cdata)) stop(grouping_var," is not a column in colData(sce).")
+    if(!grouping_var %in% colnames(cdata)) stop(grouping_var," is not a column in colData(sce).")
     core_allocation <- assign_cores(worker_cores=.90, verbose=F)
 
     lv2_groups <- unique(cdata[[grouping_var]])
+    sce <- check_sce_colnames(sce, colnames_var = grouping_var)
+    sce <- check_sce_rownames(sce, rownames_var = rownames_var)
 
     exp_agg <- parallel::mclapply(lv2_groups, function(x){
+        message_parallel("Calculating ",stat," : ",x)
         if(stat=="mean"){
-            agg <- DelayedMatrixStats::rowMeans2(exp, cols = cdata[[grouping_var]]==x)
+            agg <- DelayedMatrixStats::rowMeans2(SummarizedExperiment::assay(sce),
+                                                 cols = x, na.rm = T)
         }
         if(stat=="var"){
-            agg <- DelayedMatrixStats::rowVars(exp, cols = cdata[[grouping_var]]==x)
+            agg <- DelayedMatrixStats::rowVars(SummarizedExperiment::assay(sce),
+                                               cols = x, na.rm = T)
         }
         return(agg)
-    }, mc.cores = core_allocation$worker_cores
+        # IMPORTANT!: don't parallelize here bc it causes conflicts with DelayedArray functions (when they use multiple chunks)
+    }, mc.cores = 1 #core_allocation$worker_cores
     ) %>%
         `names<-`(lv2_groups) %>%
         data.table::as.data.table() %>%
-        `rownames<-`(row.names(exp)) %>%
+        `rownames<-`(row.names(SummarizedExperiment::assay(sce))) %>%
         DelayedArray::DelayedArray()
     if(return_sce) {
-        sce_agg <- ingest_data(exp_agg, verbose = F)
+        sce_agg <- SingleCellExperiment::SingleCellExperiment(
+            assays      = list(raw = DelayedArray::DelayedArray(as(exp_agg,"sparseMatrix")) ),
+            # colData     = S4Vectors::DataFrame(object$col.attrs[[1]]),
+            rowData     =  SummarizedExperiment::rowData(sce)
+        )
+        # Slightly modify colData
         cdata <- SummarizedExperiment::colData(sce_agg)
         cdata[[grouping_var]] <- row.names(cdata)
         SummarizedExperiment::colData(sce_agg) <- cdata
@@ -210,6 +225,46 @@ DelayedArray_grouped_stats <- function(sce,
     } else{ return(exp_agg) }
 }
 
+
+DelayedArray_normalize <- function(sce,
+                                   log_norm=T,
+                                   min_max=T,
+                                   plot_hists=F){
+    core_allocation <- assign_cores(worker_cores = .90)
+    mat <- SummarizedExperiment::assay(sce)
+    if(log_norm){
+        mat_log <- log1p(mat)
+        mat <- mat_log
+    }
+    if(min_max){
+        col_max <-DelayedArray::colMaxs(mat, na.rm = T)
+        col_min <-  DelayedArray::colMins(mat, na.rm = T)
+        mat_normed <- DelayedArray::t( (DelayedArray::t(mat)- col_min) / (col_max - col_min) )
+        mat <- mat_normed
+    }
+    if(plot_hists){
+        hist(DelayedArray::colMeans(mat, na.rm = T)) %>% print()
+        hist(DelayedArray::colMeans(mat_log, na.rm = T)) %>% print()
+        hist(DelayedArray::colMeans(mat_normed, na.rm = T)) %>% print()
+    }
+    return(mat)
+}
+
+
+
+run_MAST <- function(sce){
+    sca_delay <- MAST::FromMatrix(
+        exprsArray = list(SummarizedExperiment::assay(sce)),
+        cData = SummarizedExperiment::colData(sce),
+        fData = SummarizedExperiment::rowData(sce),
+        check_sanity = F
+    )
+    options(mc.cores=core_allocation$worker_cores)
+    res =  MAST::zlm( ~ Class,
+                      sca = sca_delay,
+                      parallel = T)
+    MAST::waldTest(res, MAST::CoefficientHypothesis('Stim.ConditionUnstim'))
+}
 
 
 run_limma <- function(sce,

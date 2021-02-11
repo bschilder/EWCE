@@ -10,8 +10,14 @@
 #' ctd = lapply(ctd,bin.specificity.into.quantiles,numberOfBins=40)
 #' print(ctd[[1]]$specificity_quantiles[1:3,])
 #' @export
-bin.specificity.into.quantiles <- function(ctdIN,numberOfBins){
+bin.specificity.into.quantiles <- function(ctdIN,numberOfBins,
+                                           as_sparse_DelayedMatrix=T,
+                                           verbose=T){
+    printer("Computing specificity quantiles",paste0("(",numberOfBins," bins)" ),"...",v=verbose)
     ctdIN$specificity_quantiles = apply(ctdIN$specificity,2,FUN=bin.columns.into.quantiles,numberOfBins=numberOfBins)
     rownames(ctdIN$specificity_quantiles) = rownames(ctdIN$specificity)
+    if(as_sparse_DelayedMatrix){
+        ctdIN$specificity_quantiles <- DelayedArray::DelayedArray(as(ctdIN$specificity_quantiles,"sparseMatrix"))
+    }
     return(ctdIN)
 }

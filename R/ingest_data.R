@@ -260,6 +260,7 @@ convert_to_SCE <- function(object,
             colData     =  object$annot,
             rowData     =  row.names(object$exp)
         )
+        sce <- check_sce_rownames(sce, verbose = verbose)
         return(sce)
     }
 
@@ -269,6 +270,7 @@ convert_to_SCE <- function(object,
         sce <- SingleCellExperiment::SingleCellExperiment(
             assays      = list(raw = DelayedArray::DelayedArray(Matrix::Matrix(as.matrix(object), sparse = T))),
         )
+        sce <- check_sce_rownames(sce, verbose = verbose)
         return(sce)
     }
     #### Seurat ####
@@ -276,6 +278,7 @@ convert_to_SCE <- function(object,
         messager("+ Seurat ==> SingleCellExperiment",v=verbose)
         # object <- Seurat::pbmc_small ## example
         sce <- Seurat::as.SingleCellExperiment(object)
+        sce <- check_sce_rownames(sce, verbose = verbose)
         return(sce)
     }
     #### AnnData ####
@@ -284,28 +287,72 @@ convert_to_SCE <- function(object,
         # sceasy::convertFormat(obj = object, from = "anndata", to="seurat",
         #                       outFile = "~/Desktop/tmp.rds")
         sce <- SingleCellExperiment::SingleCellExperiment(
-            assays      = list(raw = DelayedArray::DelayedArray(Matrix::Matrix( Matrix::t(object$X), sparse=T))),
+            assays      = list(raw = DelayedArray::DelayedArray(as( Matrix::t(object$X), "sparseMatrix"))),
             colData     = object$obs,
             rowData     = object$var
         )
+        sce <- check_sce_rownames(sce, verbose = verbose)
         return(sce)
     }
     if(class(object)[1] %in% loom_classes){
         messager("+ loom ==> SingleCellExperiment",v=verbose)
         sce <- SingleCellExperiment::SingleCellExperiment(
-            assays      = list(raw = DelayedArray::DelayedArray(Matrix::Matrix(as.matrix(object$matrix), sparse=T)) ),
+            assays      = list(raw = DelayedArray::DelayedArray(as(object$matrix), "sparseMatrix") ),
             # colData     = S4Vectors::DataFrame(object$col.attrs[[1]]),
             # rowData     = S4Vectors::DataFrame(object$row.attrs[[1]])
         )
+        sce <- check_sce_rownames(sce, verbose = verbose)
         return(sce)
     }
     #### SingleCellExperiment/SummarizedExperiment ####
     if(class(object)[1] %in% sce_classes){
         messager("+ == SummarizedExperiment",v=verbose)
-        return(object)
+        sce <- object
+        sce <- check_sce_rownames(sce, verbose = verbose)
+        return(sce)
     }
 }
 
+
+check_sce_rownames <- function(sce,
+                               rownames_var=NULL,
+                               remove_duplicates=T,
+                               verbose=T){
+    printer("Checking SCE rownames...",v=verbose)
+    rowDat <- SummarizedExperiment::rowData(sce)
+    rownames_var <- if(is.null(rownames_var)) "Gene" else rownames_var
+    if( is.null( S4Vectors::rownames(rowDat)) ){
+        if(rownames_var %in% colnames(rowDat)){
+            printer("+ Assigning rownames to:",rownames_var,v=verbose)
+            # IMPORTANT! only S4Vectors::rownames can assign row names.
+            S4Vectors::rownames(sce) <- rowDat[[rownames_var]] # Automatically assigns same rownames to assay and rowData
+        }else {
+            warning("Cannot identify rownames. Please set rownames (rowDat) first with: S4Vectors::rownames(sce) <- gene_names")
+        }
+    }
+    if(remove_duplicates){
+        printer("+ Removing duplicate gene rows.",v=verbose)
+        sce <- sce[!base::duplicated(S4Vectors::rownames(sce)),]
+    }
+    return(sce)
+}
+
+
+check_sce_colnames <- function(sce,
+                               colnames_var=NULL,
+                               verbose=T){
+    printer("Checking SCE colnames.",v=verbose)
+    colDat <- SummarizedExperiment::colData(sce)
+    if(!is.null(colnames_var)){
+        if(colnames_var %in% colnames(colDat)){
+            printer("Assigning colnames to:", colnames_var,v=verbose)
+            S4Vectors::colnames(sce) <- colDat[[colnames_var]]
+        } else {
+            printer(colnames_var,"not found in colData.",v=verbose)
+        }
+    }
+    return(sce)
+}
 
 
 save_SCE <- function(sce,

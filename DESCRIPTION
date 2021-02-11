@@ -36,8 +36,7 @@ Imports:
 Remotes:
     github::ChristophH/sctransform@*release,
     github::mojaveazure/seurat-disk,
-    github::cellgeni/sceasy,
-    github::const-ae/glmGamPoi
+    github::cellgeni/sceasy
 Suggests:
     knitr,
     BiocStyle,
