@@ -1,6 +1,6 @@
 ---
 title: "Expression Weighted Celltype Enrichment with *EWCE*"
-author: "Nathan Skene"
+author: "Nathan Skene & Brian Schilder"
 date: "`r Sys.Date()`"
 bibliography: inst/extdata/EWCE.bib
 csl: inst/extdata/nature.csl
@@ -95,3 +95,13 @@ Science, 2015.](http://www.sciencemag.org/content/early/2015/02/18/science.aaa19
 
 # References
 
+# Session Info  
+
+<details> 
+
+```{r Session Info}
+utils::sessionInfo()
+```
+
+
+</details>

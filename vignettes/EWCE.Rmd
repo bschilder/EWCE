@@ -1,7 +1,17 @@
 ---
 title: "Expression Weighted Celltype Enrichment with *EWCE*"
-author: "Nathan Skene"
+author: "Nathan Skene & Brian Schilder"
 date: "`r Sys.Date()`"
+output: 
+  rmarkdown::html_document: 
+    theme: spacelab
+    highlight: zenburn 
+    code_folding: show 
+    toc: true 
+    toc_float: true
+    smooth_scroll: true
+    number_sections: false 
+    self_contained: true
 bibliography: ../inst/extdata/EWCE.bib
 csl: ../inst/extdata/nature.csl
 vignette: >
@@ -557,6 +567,16 @@ print(res_rbfox_id)
 ```
 
 
-
 # References
+
+
+# Session Info  
+
+<details> 
+
+```{r Session Info}
+utils::sessionInfo()
+```
+
+</details>
 

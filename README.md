@@ -1,7 +1,7 @@
 Expression Weighted Celltype Enrichment with *EWCE*
 ================
-Nathan Skene
-2020-08-20
+Nathan Skene & Brian Schilder
+2021-02-11
 
 <!-- Readme.md is generated from Readme.Rmd. Please edit that file -->
 
@@ -15,7 +15,7 @@ Status](https://travis-ci.org/NathanSkene/EWCE.svg?branch=master)](https://travi
 
 The *EWCE* package is designed to facilitate expression weighted
 celltype enrichment analysis as described in our Frontiers in
-Neuroscience paper.<sup>1</sup>
+Neuroscience paper<sup>1</sup>.
 
 The package was originally designed to work with the single cell
 cortical transcriptome data from the Linnarsson lab<sup>2</sup> which is
@@ -39,7 +39,7 @@ Note that throughout this vignette we use the terms ‘cell type’ and
 type is. This is described in further detail in our paper<sup>1</sup>,
 but relates to the two levels of annotation provided in the Linnarsson
 dataset<sup>2</sup>. In this dataset a cell is described as having a
-cell type (i.e. ‘Interneuron’) and subcell type (i.e. ‘Int11’ a.k.a
+cell type (i.e. ‘Interneuron’) and subcell type (i.e. ‘Int11’ a.k.a
 Interneuron type 11).
 
 # Overview
@@ -113,6 +113,86 @@ by single-cell RNA-seq. Science,
 2015.](http://www.sciencemag.org/content/early/2015/02/18/science.aaa1934.abstract)
 
 # References
+
+# Session Info
+
+<details>
+
+``` r
+utils::sessionInfo()
+```
+
+    ## R version 4.0.2 (2020-06-22)
+    ## Platform: x86_64-pc-linux-gnu (64-bit)
+    ## Running under: Ubuntu 20.10
+    ## 
+    ## Matrix products: default
+    ## BLAS:   /usr/lib/x86_64-linux-gnu/openblas-pthread/libblas.so.3
+    ## LAPACK: /usr/lib/x86_64-linux-gnu/openblas-pthread/libopenblasp-r0.3.10.so
+    ## 
+    ## locale:
+    ##  [1] LC_CTYPE=en_GB.UTF-8       LC_NUMERIC=C              
+    ##  [3] LC_TIME=en_GB.UTF-8        LC_COLLATE=en_GB.UTF-8    
+    ##  [5] LC_MONETARY=en_GB.UTF-8    LC_MESSAGES=en_GB.UTF-8   
+    ##  [7] LC_PAPER=en_GB.UTF-8       LC_NAME=C                 
+    ##  [9] LC_ADDRESS=C               LC_TELEPHONE=C            
+    ## [11] LC_MEASUREMENT=en_GB.UTF-8 LC_IDENTIFICATION=C       
+    ## 
+    ## attached base packages:
+    ## [1] stats     graphics  grDevices utils     datasets  methods   base     
+    ## 
+    ## other attached packages:
+    ## [1] EWCE_0.99.2
+    ## 
+    ## loaded via a namespace (and not attached):
+    ##  [1] MatrixGenerics_1.2.1        Biobase_2.50.0             
+    ##  [3] ggdendro_0.1.22             httr_1.4.2                 
+    ##  [5] bit64_4.0.5                 assertthat_0.2.1           
+    ##  [7] askpass_1.1                 stats4_4.0.2               
+    ##  [9] BiocFileCache_1.14.0        blob_1.2.1                 
+    ## [11] GenomeInfoDbData_1.2.4      yaml_2.2.1                 
+    ## [13] progress_1.2.2              globals_0.14.0             
+    ## [15] pillar_1.4.7                RSQLite_2.2.3              
+    ## [17] lattice_0.20-41             limma_3.46.0               
+    ## [19] glue_1.4.2                  digest_0.6.27              
+    ## [21] XVector_0.30.0              GenomicRanges_1.42.0       
+    ## [23] colorspace_2.0-0            htmltools_0.5.1.1          
+    ## [25] Matrix_1.2-18               plyr_1.8.6                 
+    ## [27] XML_3.99-0.5                pkgconfig_2.0.3            
+    ## [29] biomaRt_2.46.3              listenv_0.8.0              
+    ## [31] zlibbioc_1.36.0             purrr_0.3.4                
+    ## [33] scales_1.1.1                tibble_3.0.6               
+    ## [35] openssl_1.4.3               generics_0.1.0             
+    ## [37] IRanges_2.24.1              ggplot2_3.3.3              
+    ## [39] ellipsis_0.3.1              cachem_1.0.3               
+    ## [41] SummarizedExperiment_1.20.0 BiocGenerics_0.36.0        
+    ## [43] RNOmni_1.0.0                magrittr_2.0.1             
+    ## [45] crayon_1.4.1                memoise_2.0.0              
+    ## [47] evaluate_0.14               future_1.21.0              
+    ## [49] parallelly_1.23.0           MASS_7.3-52                
+    ## [51] homologene_1.4.68.19.3.27   xml2_1.3.2                 
+    ## [53] tools_4.0.2                 prettyunits_1.1.1          
+    ## [55] hms_1.0.0                   lifecycle_0.2.0            
+    ## [57] matrixStats_0.58.0          stringr_1.4.0              
+    ## [59] S4Vectors_0.28.1            munsell_0.5.0              
+    ## [61] DelayedArray_0.16.1         AnnotationDbi_1.52.0       
+    ## [63] compiler_4.0.2              GenomeInfoDb_1.26.2        
+    ## [65] rlang_0.4.10                RCurl_1.98-1.2             
+    ## [67] HGNChelper_0.8.1            grid_4.0.2                 
+    ## [69] rappdirs_0.3.3              glmGamPoi_1.3.6            
+    ## [71] bitops_1.0-6                rmarkdown_2.6              
+    ## [73] gtable_0.3.0                codetools_0.2-16           
+    ## [75] DBI_1.1.1                   curl_4.3                   
+    ## [77] reshape2_1.4.4              R6_2.5.0                   
+    ## [79] gridExtra_2.3               knitr_1.31                 
+    ## [81] dplyr_1.0.4                 future.apply_1.7.0         
+    ## [83] fastmap_1.1.0               bit_4.0.4                  
+    ## [85] stringi_1.5.3               parallel_4.0.2             
+    ## [87] Rcpp_1.0.6                  sctransform_0.3.2          
+    ## [89] vctrs_0.3.6                 dbplyr_2.1.0               
+    ## [91] tidyselect_1.1.0            xfun_0.21
+
+</details>
 
 <div id="refs" class="references">
 
