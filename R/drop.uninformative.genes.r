@@ -124,20 +124,22 @@ drop.uninformative.genes <- function(exp,
     }
 
     #### glmGamPoi ####
-    if(tolower(DGE_method)=="glmgampoi"){
-        # Best for large datasets that can't fit into memory.
-        messager("DGE:: glmGamPoi...",v=verbose)
-        sce_de <- run_glmGamPoi_DE(sce,
-                                   level2annot=level2annot,
-                                   adj_pval_thresh=adj_pval_thresh,
-                                   return_as_SCE=T,
-                                   # sce_save_dir=sce_save_dir,
-                                   verbose=verbose)
-                                   # ...)
-        printer(paste(nrow(sce)-nrow(sce_de),"/",nrow(sce),
-                      "genes dropped @ DGE adj_pval_thresh <",adj_pval_thresh), v=verbose)
-        sce <- sce_de
-    }
+    ## Removing this option for now until we can figure out how to pass the Travis CI checks,
+    ## which are failing when installing the deps for glmGamPo (hdf5).
+    # if(tolower(DGE_method)=="glmgampoi"){
+    #     # Best for large datasets that can't fit into memory.
+    #     messager("DGE:: glmGamPoi...",v=verbose)
+    #     sce_de <- run_glmGamPoi_DE(sce,
+    #                                level2annot=level2annot,
+    #                                adj_pval_thresh=adj_pval_thresh,
+    #                                return_as_SCE=T,
+    #                                # sce_save_dir=sce_save_dir,
+    #                                verbose=verbose)
+    #                                # ...)
+    #     printer(paste(nrow(sce)-nrow(sce_de),"/",nrow(sce),
+    #                   "genes dropped @ DGE adj_pval_thresh <",adj_pval_thresh), v=verbose)
+    #     sce <- sce_de
+    # }
     # Report time elapsed
     end <- Sys.time()
     print(end-start)

@@ -206,7 +206,7 @@ generate.celltype.data <- function(exp,
 
     #### Quantile normalization ####
     # Use the rank norm transformation on specificity
-    rNorm <- function(ctdIN){   bbb = t(apply(ctdIN$specificity,1,RNOmni::rankNorm));  return(bbb)    }
+    # rNorm <- function(ctdIN){   bbb = t(apply(ctdIN$specificity,1,RNOmni::rankNorm));  return(bbb)    }
 
     # ADD DENDROGRAM DATA TO CTD
     ctd = lapply(ctd, bin.specificity.into.quantiles, numberOfBins=numberOfBins)
@@ -219,7 +219,7 @@ generate.celltype.data <- function(exp,
 
     if(return_ctd){
         messager("+ Returning list of CTD file name, and the CTD itself.",v=verbose)
-        return(list(fnames=fnames,
+        return(list(fNames=fNames,
                     ctd=ctd))
     } else { return(fNames)}
 }

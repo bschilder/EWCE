@@ -229,6 +229,54 @@ read_scRNAseq_data <- function(obj,
 
 
 
+
+
+read_GEO_files <- function(file_dir){
+    # file_dir <- "~/projects/model_celltype_conservation/raw_data/scRNAseq/Raj2020/"
+    file_prefixes <- list.files(file_dir,
+                                pattern = "-barcodes.tsv.gz") %>%
+        gsub(pattern = "-barcodes.tsv.gz",replacement = "")
+
+    core_allocation <- assign_cores(worker_cores = .9)
+
+    sce_list <- parallel::mclapply(file_prefixes, function(x){
+        message_parallel(x)
+        #### Read in components ####
+        colDat <- read.delim2(file.path(file_dir,paste0(x,"-barcodes.tsv.gz")),
+                              header = F, col.names = "barcodes")
+        colDat$sample <- x
+        rowDat <- read.delim2(file.path(file_dir,paste0(x,"-genes.tsv.gz")),
+                              header = F, col.names = c("ensembl_id","gene_symbol"))
+        mat <- DelayedArray::DelayedArray(Matrix::readMM(file.path(file_dir,paste0(x,"-matrix.mtx.gz"))))
+        #### Construct SCE object ####
+        sce_sub <- SingleCellExperiment::SingleCellExperiment(
+            assays      = list(raw = mat),
+            colData     = colDat,
+            rowData     = rowDat
+        )
+        sce_sub <- check_sce_rownames(sce_sub,
+                                      rownames_var = "gene_symbol",
+                                      verbose = F)
+        return(sce_sub)
+    }, mc.cores = core_allocation$worker_cores)
+    printer("Merging all SCE objects into one...")
+    sce <- do.call("cbind",sce_list)
+    return(sce)
+}
+
+
+read_seurat_files <- function(GSE){
+    # GSE="GSE158142"
+    # For some reason doesn't list RDS files....
+    # ftp <- file.path("https://ftp.ncbi.nlm.nih.gov/geo/series",paste0(substr(GSE,1,6),"nnn"),GSE,"suppl")
+    # files <- data.table::fread(file.path(ftp,"filelist.txt"))
+    GEOquery::getGEOSuppFiles(GEO = GSE,
+                              fet
+                              filter_regex = ".rds")
+
+}
+
+
 convert_to_SCE <- function(object,
                            verbose=T){
     messager("Converting formats:",v=verbose)
