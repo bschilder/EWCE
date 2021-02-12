@@ -20,7 +20,7 @@ ingest_data(
   custom_reader = NULL,
   sce_save_dir = NULL,
   quicksave_HDF5 = T,
-  replace_HDF5 = F,
+  overwrite = F,
   verbose = T,
   ...
 )

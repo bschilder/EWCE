@@ -4,7 +4,7 @@
 \alias{prep.dendro}
 \title{prep.dendro}
 \usage{
-prep.dendro(ctdIN)
+prep.dendro(ctdIN, verbose = T)
 }
 \arguments{
 \item{ctdIN}{A single annotLevel of a ctd, i.e. ctd[[1]] (the function is intended to be used via apply)}

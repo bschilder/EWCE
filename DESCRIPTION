@@ -15,6 +15,9 @@ LazyData: TRUE
 Depends: R(>= 3.2)
 VignetteBuilder: knitr
 Imports:
+    dplyr, 
+    devtools,
+    here,
     XML,
     ggplot2,
     reshape2,
@@ -56,6 +59,7 @@ biocViews:
     Proteomics, 
     Visualization,
     FunctionalGenomics,
-    SingleCellExperiment 
+    SingleCellExperiment,
+    DelayedArray 
 RoxygenNote: 7.1.1
 Encoding: UTF-8

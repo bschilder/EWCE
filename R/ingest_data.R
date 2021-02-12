@@ -265,16 +265,7 @@ read_GEO_files <- function(file_dir){
 }
 
 
-read_seurat_files <- function(GSE){
-    # GSE="GSE158142"
-    # For some reason doesn't list RDS files....
-    # ftp <- file.path("https://ftp.ncbi.nlm.nih.gov/geo/series",paste0(substr(GSE,1,6),"nnn"),GSE,"suppl")
-    # files <- data.table::fread(file.path(ftp,"filelist.txt"))
-    GEOquery::getGEOSuppFiles(GEO = GSE,
-                              fet
-                              filter_regex = ".rds")
 
-}
 
 
 convert_to_SCE <- function(object,
@@ -411,29 +402,21 @@ save_SCE <- function(sce,
     if(!is.null(save_dir)){
         if(quicksave_HDF5 & file.exists(file.path(save_dir,"assays.h5")) & (overwrite==F)){
             messager("+ Updating existing HDF5...",v=verbose)
-            sce <- HDF5Array::quickResaveHDF5SummarizedExperiment(x=sce,
-                                                                  verbose=verbose)
+            sce <- tryCatch(expr = {
+                        HDF5Array::quickResaveHDF5SummarizedExperiment(x=sce, verbose=verbose)
+                    },
+                    error=function(e){
+                        HDF5_hard_save(sce=sce,
+                                       save_dir=save_dir,
+                                       overwrite=overwrite,
+                                       verbose=verbose)
+            })
         } else {
             if( (!dir.exists(save_dir)) | (overwrite) ){
-                messager("+ Writing new HDF5...",v=verbose)
-                # DON'T create the HDF5 dir itself (will return an error about overwriting)
-                dir.create(dirname(save_dir), showWarnings = F, recursive = T)
-                # IMPORTANT!: set as.sparse=T if you have the latest version of HDF5Array (1.8.11)
-                pkg_ver <- packageVersion("HDF5Array")
-                pkg_ver_split <- strsplit(as.character(pkg_ver),".", fixed = T)[[1]]
-                pkg_V <- as.numeric(paste(pkg_ver_split[1], pkg_ver_split[2], sep="."))
-                if(pkg_V>=1.8){
-                    sce <- HDF5Array::saveHDF5SummarizedExperiment(x=sce,
-                                                                   dir=save_dir,
-                                                                   verbose=verbose,
-                                                                   as.sparse=T,
-                                                                   replace=overwrite)
-                }else{
-                    sce <- HDF5Array::saveHDF5SummarizedExperiment(x=sce,
-                                                                   dir=save_dir,
-                                                                   verbose=verbose,
-                                                                   replace=overwrite)
-                }
+                sce <- HDF5_hard_save(sce=sce,
+                                      save_dir=save_dir,
+                                      overwrite=overwrite,
+                                      verbose=verbose)
 
             } else {
                 messager("+ Returning existing SCE object.",v=verbose)
@@ -443,6 +426,32 @@ save_SCE <- function(sce,
     return(sce)
 }
 
+
+HDF5_hard_save <- function(sce,
+                           save_dir,
+                           overwrite=T,
+                           verbose=T){
+    messager("+ Writing new HDF5...",v=verbose)
+    # DON'T create the HDF5 dir itself (will return an error about overwriting)
+    dir.create(dirname(save_dir), showWarnings = F, recursive = T)
+    # IMPORTANT!: set as.sparse=T if you have the latest version of HDF5Array (1.8.11)
+    pkg_ver <- packageVersion("HDF5Array")
+    pkg_ver_split <- strsplit(as.character(pkg_ver),".", fixed = T)[[1]]
+    pkg_V <- as.numeric(paste(pkg_ver_split[1], pkg_ver_split[2], sep="."))
+    if(pkg_V>=1.8){
+        sce <- HDF5Array::saveHDF5SummarizedExperiment(x=sce,
+                                                       dir=save_dir,
+                                                       verbose=verbose,
+                                                       as.sparse=T,
+                                                       replace=overwrite)
+    }else{
+        sce <- HDF5Array::saveHDF5SummarizedExperiment(x=sce,
+                                                       dir=save_dir,
+                                                       verbose=verbose,
+                                                       replace=overwrite)
+    }
+    return(sce)
+}
 
 
 

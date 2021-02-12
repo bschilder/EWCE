@@ -4,7 +4,12 @@
 \alias{bin.specificity.into.quantiles}
 \title{bin.specificity.into.quantiles}
 \usage{
-bin.specificity.into.quantiles(ctdIN, numberOfBins)
+bin.specificity.into.quantiles(
+  ctdIN,
+  numberOfBins,
+  as_sparse_DelayedMatrix = T,
+  verbose = T
+)
 }
 \arguments{
 \item{ctdIN}{A single annotLevel of a ctd, i.e. ctd[[1]] (the function is intended to be used via apply)}

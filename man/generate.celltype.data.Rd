@@ -11,12 +11,15 @@ generate.celltype.data(
   exp,
   annotLevels,
   groupName,
+  numberOfBins = 40,
   no_cores = NULL,
   add_names = F,
   savePath = "~/",
   file_prefix = "CellTypeData",
   force_new_file = T,
   return_ctd = F,
+  drop_nonhuman_genes = F,
+  input_species = "mouse",
   verbose = T
 )
 }

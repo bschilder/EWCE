@@ -78,7 +78,8 @@ sce <- ingest_data(obj = cortex_mrna)
 
 ```{r Ingest EWCE_list: DelayedArray}
 sce <- ingest_data(obj = cortex_mrna, 
-                   sce_save_dir = here::here("~/Desktop/sce_examples"))
+                   sce_save_dir = here::here("~/Desktop/sce_examples"),
+                   overwrite = T)
 ```
 
 ## Ingest *EWCE_list*: from storage
@@ -194,26 +195,39 @@ sce.deseq <- EWCE::drop.uninformative.genes(sce,
 
 ### glmGamPoi
 
--   The DGE method [`glmGamPoi`](https://github.com/const-ae/glmGamPoi) takes advantage of the `DelayedArray` matrix class the SCE is stored as, so that each time it only reads in the subset of data necessary to fit the Gamma-Poisson Generalized Linear Model.
+(under construction)
+<!-- -   The DGE method [`glmGamPoi`](https://github.com/const-ae/glmGamPoi) takes advantage of the `DelayedArray` matrix class the SCE is stored as, so that each time it only reads in the subset of data necessary to fit the Gamma-Poisson Generalized Linear Model. -->
 
--   `glmGamPoi` supports parallelization, by automatically using \~90% of all available cores.
+<!-- -   `glmGamPoi` supports parallelization, by automatically using \~90% of all available cores. -->
 
--   **NOTE**: While `glmGamPoi` is scalable, it can take a long time to run. So if you have a reasonably small dataset that you can fit into all at once memory, it's best to instead use [`limma`](https://bioconductor.org/packages/release/bioc/html/limma.html). For very large datasets that can't fit into memory, `glmGamPoi` is the way to go.
+<!-- -   **NOTE**: While `glmGamPoi` is scalable, it can take a long time to run. So if you have a reasonably small dataset that you can fit into all at once memory, it's best to instead use [`limma`](https://bioconductor.org/packages/release/bioc/html/limma.html). For very large datasets that can't fit into memory, `glmGamPoi` is the way to go. -->
 
-```{r glmGamPoi, eval=F}
-data(cortex_mrna)
-# sce <- ingest_data(obj = cortex_mrna)
+<!-- ```{r glmGamPoi, eval=F} -->
+<!-- data(cortex_mrna) -->
+<!-- # sce <- ingest_data(obj = cortex_mrna) -->
 
-sce.glmgp <- EWCE::drop.uninformative.genes(cortex_mrna, 
-                                            level2annot="level2class",
-                                            DGE_method="glmGamPoi",  
-                                            drop_nonhuman_genes=T,
-                                            input_species="mouse",
-                                            return_sce=T,  
-                                            min_variance_decile=.9,
-                                             
-                                            sce_save_dir=here::here("~/Desktop/sce_examples"),
-                                            on_disk=F)
+<!-- sce.glmgp <- EWCE::drop.uninformative.genes(cortex_mrna,  -->
+<!--                                             level2annot="level2class", -->
+<!--                                             DGE_method="glmGamPoi",   -->
+<!--                                             drop_nonhuman_genes=T, -->
+<!--                                             input_species="mouse", -->
+<!--                                             return_sce=T,   -->
+<!--                                             min_variance_decile=.9, -->
+
+<!--                                             sce_save_dir=here::here("~/Desktop/sce_examples"), -->
+<!--                                             on_disk=F) -->
+<!-- ``` -->  
+
+# Session Info  
+
+<details> 
+
+```{r Session Info}
+utils::sessionInfo()
 ```
 
+</details>  
+
 # References
+# References
+
