@@ -273,17 +273,53 @@ convert_to_SCE <- function(object,
     messager("Converting formats:",v=verbose)
     core_allocation <- assign_cores(worker_cores = .90)
 
-    ewce_classes <- "EWCE_list"
+    ewce_classes <- c("EWCE_list","SCE_list")
     matrix_classes <- c("data.table","data.frame","tbl_df","tbl","matrix","Matrix","array","DelayedArray","DelayedMatrix",names(getClass("Matrix")@subclasses)) # more than 40 ..
     loom_classes <-  c("loom","H5File","H5RefClass")
     sce_classes <- c("SingleCellLoomExperiment","SingleCellExperiment","SummarizedExperiment")
     anndata_classes <- c("AnnData","AnnDataR6","AnnDataR6R6")
     seurat_classes <- c("Seurat")
     supported_classes <- c(matrix_classes, loom_classes, sce_classes, anndata_classes, seurat_classes, ewce_classes)
-    supported_classes_print <- c("matrix (any subclass)",loom_classes, sce_classes, anndata_classes, seurat_classes)
+    supported_classes_print <- c("matrix (any subclass)",loom_classes, sce_classes, anndata_classes, seurat_classes, ewce_classes)
+
+    #### EWCE_list class ####
     if(class(object)[1]=="list" & all(c("exp","annot") %in% names(object)) ){
         class(object) <- "EWCE_list"
     }
+    #### CTD class ####
+    if(class(object)[1]=="list" & all(c("mean_exp","specificity") %in% names(object[[1]])) ){
+        messager("+ CTD ==> SingleCellExperiment",v=verbose)
+        # object <- readRDS("~/Desktop/model_celltype_conservation/processed_data/EWCE/CTD_list.rds")[[1]]
+        ctd <- object
+        #### Name CTD levels ####
+        if(is.null(names(ctd))){
+            names(ctd) <- paste0("level_",1:length(ctd))
+        } else {
+            names(ctd) <- names(ctd)
+        }
+        sce_list <- lapply(names(ctd), function(lvl){
+            message("Converting level: ",lvl)
+            ctd_lvl <- ctd[[lvl]]
+            #### Use matrices that are present ###
+            matrix_list <- list()
+            for(mtx_name in c("mean_exp","median_exp",
+                              "specificity","median_specificity","specificity_quantiles")){
+                if(mtx_name %in% names(ctd_lvl)){ matrix_list[[mtx_name]] <- DelayedArray::DelayedArray(as(as(ctd_lvl[[mtx_name]], "matrix"), "sparseMatrix")) }
+            }
+            sce <- SingleCellExperiment::SingleCellExperiment(
+                assays      =  matrix_list,
+                colData     =  data.frame(colnames(matrix_list[[1]])) %>% `colnames<-`(lvl),
+                rowData     =  data.frame(gene=row.names(matrix_list[[1]]), row.names = row.names(matrix_list[[1]]))
+            )
+            sce <- check_sce_rownames(sce, verbose = verbose)
+        }) %>% `names<-`(names(ctd))
+        ## "SCE_list" class messes up other functions that expect class "list"
+        # class(sce_list) <- "SCE_list"
+        return(sce_list)
+    }
+
+
+
 
     #### Check if class is supported ####
     if(!class(object)[1] %in% supported_classes){
@@ -292,10 +328,10 @@ convert_to_SCE <- function(object,
              paste(supported_classes_print, collapse = ", "))
     }
     ### EWCE_list ####
-    if(class(object)[1] %in% ewce_classes){
+    if(class(object)[1] == "EWCE_list"){
         messager("+ EWCE_list ==> SingleCellExperiment",v=verbose)
         sce <- SingleCellExperiment::SingleCellExperiment(
-            assays      = list(raw = DelayedArray::DelayedArray(Matrix::Matrix(as.matrix(object$exp), sparse = T))),
+            assays      = list(raw = DelayedArray::DelayedArray(as(as.matrix(object$exp), "sparseMatrix"))),
             colData     =  object$annot,
             rowData     =  row.names(object$exp)
         )
@@ -307,7 +343,7 @@ convert_to_SCE <- function(object,
     if(class(object)[1] %in% matrix_classes){
         messager("+ Matrix ==> SingleCellExperiment",v=verbose)
         sce <- SingleCellExperiment::SingleCellExperiment(
-            assays      = list(raw = DelayedArray::DelayedArray(Matrix::Matrix(as.matrix(object), sparse = T))),
+            assays      = list(raw = DelayedArray::DelayedArray(as(as.matrix(object), "sparseMatrix"))),
         )
         sce <- check_sce_rownames(sce, verbose = verbose)
         return(sce)
