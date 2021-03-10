@@ -54,10 +54,10 @@
 generate.bootstrap.plots <- function(sct_data, hits, bg, genelistSpecies="mouse",sctSpecies="mouse", reps, annotLevel=1, full_results=NA, listFileName="",savePath="~/"){
     # Check the arguments
     if(length(full_results)!=3){stop("ERROR: full_results is not valid output from the bootstrap.enrichment.test function")}
-    if(sum(!as.character(unique(full_results$results$CellType)) %in% colnames(sct_data[[1]]$specificity))==length(as.character(unique(full_results$results$CellType)))){
+    if(sum(!as.character(unique(full_results$results$CellType)) %in% colnames(sct_data[[annotLevel]]$specificity))==length(as.character(unique(full_results$results$CellType)))){
         stop("ERROR: No celltypes in full_results are found in sct_data. Perhaps the wrong annotLevel was used?")
     }
-    if(sum(!as.character(unique(full_results$results$CellType)) %in% colnames(sct_data[[1]]$specificity))>0){
+    if(sum(!as.character(unique(full_results$results$CellType)) %in% colnames(sct_data[[annotLevel]]$specificity))>0){
         stop("ERROR: Not all celltypes in full_results are found in sct_data. Perhaps the wrong annotLevel was used?")
     }
 

@@ -48,8 +48,16 @@
 #' @import stats
 # @importFrom reshape2 melt
 # @import plyr
-bootstrap.enrichment.test <- function(sct_data=NA,hits=NA,bg=NA,genelistSpecies="mouse",sctSpecies="mouse",reps = 100,annotLevel=1,geneSizeControl=FALSE,controlledCT=NULL){
-
+bootstrap.enrichment.test <- function(sct_data=NA,
+                                      hits=NA,
+                                      bg=NA,
+                                      genelistSpecies="mouse",
+                                      sctSpecies="mouse",
+                                      reps = 100,
+                                      annotLevel=1,
+                                      geneSizeControl=FALSE,
+                                      controlledCT=NULL,
+                                      verbose=F){
     checkedLists = check.ewce.genelist.inputs(sct_data,hits,bg,genelistSpecies,sctSpecies,geneSizeControl)
     hits=checkedLists$hits
     bg=checkedLists$bg
@@ -83,7 +91,8 @@ bootstrap.enrichment.test <- function(sct_data=NA,hits=NA,bg=NA,genelistSpecies=
 
 
     if(!is.null(names(sct_data))){
-        numLevels = sum(names(sct_data)=="") # This is neccesary in case further meta-data such as $name is used
+        # This is necessary in case further meta-data such as $name is used
+        numLevels = length(names(sct_data)[!names(sct_data) %in% c("annot","name")])
     }else{
         numLevels = length(sct_data)
     }
@@ -100,10 +109,15 @@ bootstrap.enrichment.test <- function(sct_data=NA,hits=NA,bg=NA,genelistSpecies=
 
 	#hitGenes,sct_data,annotLevel,reps,geneSizeControl,controlledCT
 
-    print(hitGenes)
+    if(verbose) print(hitGenes)
     if(!geneSizeControl){control_network=NULL}
-    sumProp = get_summed_proportions(hitGenes,sct_data,annotLevel,reps,geneSizeControl,controlledCT,control_network = control_network)
-
+    sumProp = get_summed_proportions(hitGenes,
+                                     sct_data,
+                                     annotLevel,
+                                     reps,
+                                     geneSizeControl,
+                                     controlledCT,
+                                     control_network = control_network)
     hit.cells=sumProp$hit.cells
     bootstrap_data=sumProp$bootstrap_data
 
@@ -111,28 +125,28 @@ bootstrap.enrichment.test <- function(sct_data=NA,hits=NA,bg=NA,genelistSpecies=
 	# - CALCULATING P-VALUE, FOLD CHANGE AND MARKERS ETC
 	count=0
 	for(ct in cells){
-	    print(ct)
+	    if(verbose) print(ct)
 		count=count+1
 		# For cell type 'ct' get the bootstrap and target list values
 		ct_boot_dist = bootstrap_data[,colnames(sct_data[[annotLevel]]$specificity)==ct]
 		hit_sum = hit.cells[colnames(sct_data[[annotLevel]]$specificity)==ct]
-		# Get propability and fold change of enrichment
+		# Get probability and fold change of enrichment
 		p=sum(ct_boot_dist>=hit_sum)/reps
-		print(p)
+		if(verbose) print(p)
 		fold_change  = hit_sum/mean(ct_boot_dist)
 		sd_from_mean = (hit_sum-mean(ct_boot_dist))/sd(ct_boot_dist)
 		ct_root=ct
 		if(p<0.05){
 			# If cell type is significant, print the contributing genes:
-			print(sprintf("Fold enrichment: %s",fold_change))
-			print(sprintf("Standard deviations from mean: %s", sd_from_mean))
+			if(verbose) print(sprintf("Fold enrichment: %s",fold_change))
+		    if(verbose) print(sprintf("Standard deviations from mean: %s", sd_from_mean))
 		}
 		if(count==1){
 			results = data.frame(CellType=ct,annotLevel=annotLevel,p=p,fold_change=fold_change,sd_from_mean=sd_from_mean)
 		}else{
 			results = rbind(results,data.frame(CellType=ct,annotLevel=annotLevel,p=p,fold_change=fold_change,sd_from_mean=sd_from_mean))
 		}
-		print("")
+		if(verbose) print("")
 	}
 
 	full_results = list(results=results,hit.cells=hit.cells,bootstrap_data=bootstrap_data)

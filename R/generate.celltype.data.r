@@ -57,6 +57,8 @@ generate.celltype.data <- function(exp,
                                    return_ctd=F,
                                    drop_nonhuman_genes=F,
                                    input_species="mouse",
+                                   specificity_quantiles=T,
+                                   dendrograms=T,
                                    verbose=T){
     #### Check group name ####
     if(is.null(groupName)){stop("ERROR: groupName must be set. groupName is used to label the files created by this function.")}
@@ -209,9 +211,12 @@ generate.celltype.data <- function(exp,
     # rNorm <- function(ctdIN){   bbb = t(apply(ctdIN$specificity,1,RNOmni::rankNorm));  return(bbb)    }
 
     # ADD DENDROGRAM DATA TO CTD
-    ctd = lapply(ctd, bin.specificity.into.quantiles, numberOfBins=numberOfBins)
-    ctd = lapply(ctd, prep.dendro)
-
+    if(specificity_quantiles){
+        ctd = lapply(ctd, bin.specificity.into.quantiles, numberOfBins=numberOfBins)
+    }
+    if(dendrograms){
+        ctd = lapply(ctd, prep.dendro)
+    }
     #### Save results ####
     messager("+ Saving results ==> ",fNames, v=verbose)
     dir.create(dirname(fNames), showWarnings = F, recursive = T)
